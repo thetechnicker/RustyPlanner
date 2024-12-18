@@ -1,9 +1,10 @@
 use std::io::{self, Write};
 use std::str::FromStr;
+use chrono::{DateTime, Utc};
 
 #[derive(Debug)]
 struct Event {
-    timedate: String, // You can use a more complex type for timedate if needed
+    timedate: DateTime<Utc>, // You can use a more complex type for timedate if needed
     name: String,
 }
 
@@ -38,8 +39,9 @@ fn main() {
 
 fn parse_add(add_str: &str) -> Option<Event> {
     let words = split_string_at_spaces(add_str);
-    for word in words {
-        println!("{}", word);
+    if words.len() <= 2{
+        println!("Error missing argument");
+        return None;
     }
     None
 }
