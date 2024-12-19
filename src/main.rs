@@ -1,12 +1,11 @@
 use std::io::{self, Write};
-//use chrono::{DateTime, Utc, TimeZone};
-use chrono::{DateTime, Utc, NaiveDate, NaiveTime, NaiveDateTime, Timelike, Datelike, Local};
+use chrono::{NaiveDate, NaiveTime, NaiveDateTime, Local};
 use regex::Regex;
 //use std::str::FromStr;
 
 #[derive(Debug)]
 struct Event {
-    timedate: DateTime<Utc>, // You can use a more complex type for timedate if needed
+    timedate: NaiveDateTime,
     name: String,
 }
 
@@ -30,11 +29,7 @@ fn main() {
         }
 
         if trimmed.to_lowercase().starts_with("add") {
-            if let Some(event) = parse_add(trimmed) {
-                println!("{:?}", event);
-            } else {
-                println!("Failed to parse the event.");
-            }
+            let event = parse_add(trimmed);
         }
     }
 }
@@ -69,9 +64,12 @@ fn parse_add(add_str: &str) -> Option<Event> {
         name = name.replace(_date, "").trim().to_string();
     }
 
-    parse_datetime(&date, &time);
+    let datetime_opt = parse_datetime(&date, &time);
 
-    None
+    match datetime_opt {
+        Some(datetime) => Some(Event {timedate: datetime, name: name}),
+        _ => None,
+    }
 }
 
 fn parse_datetime(date_str: &str, time_str: &str) -> Option<NaiveDateTime> {
@@ -92,6 +90,7 @@ fn parse_datetime(date_str: &str, time_str: &str) -> Option<NaiveDateTime> {
             Some(Local::now().naive_utc().date()) // Get today's date in UTC
         }
     };
+
     match date {
         Some(d) => println!("The date is: {}", d),
         None => println!("No date available"),
@@ -108,6 +107,11 @@ fn parse_datetime(date_str: &str, time_str: &str) -> Option<NaiveDateTime> {
     } else {
         None
     };
+
+    match time {
+        Some(t) => println!("The time is: {}", t),
+        None => println!("No time available"),
+    }
 
     // Combine date and time
     match (date, time) {
