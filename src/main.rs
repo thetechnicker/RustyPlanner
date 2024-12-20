@@ -1,9 +1,10 @@
 use std::io::{self, Write};
 use chrono::{NaiveDate, NaiveTime, NaiveDateTime, Local};
 use regex::Regex;
-//use std::str::FromStr;
+use serde::{Deserialize, Serialize};
+use serde_json::Result;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 struct Event {
     timedate: NaiveDateTime,
     name: String,
@@ -28,7 +29,7 @@ fn main() {
         //println!("You entered: {}", trimmed);
 
         if trimmed.to_lowercase().contains("exit") {
-            return;
+            break;
         }
 
         if trimmed.to_lowercase().starts_with("add") {
@@ -43,6 +44,12 @@ fn main() {
             }
         }
     }
+    
+    // Convert the vector of events to a JSON string
+    let json_string = serde_json::to_string(&events).expect("Failed to convert to JSON");
+
+    // Print the JSON string
+    println!("{}", json_string);
 }
 
 fn parse_add(add_str: &str) -> Option<Event> {
