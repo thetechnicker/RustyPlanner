@@ -3,7 +3,6 @@ use chrono::{NaiveDate, NaiveTime, NaiveDateTime, Local};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 //use serde_json::Result;
-use std::env;
 use directories::BaseDirs;
 use std::fs;
 use std::path::PathBuf;
@@ -17,15 +16,6 @@ struct Event {
 fn main() {
     let mut events: Vec<Event> = Vec::new();
 
-    match env::current_dir() {
-        Ok(path) => {
-            println!("Current working directory: {}", path.display());
-        }
-        Err(e) => {
-            eprintln!("Error getting current directory: {}", e);
-        }
-    }
-    
     let data_file_path: Option<PathBuf>;
 
     if let Some(base_dirs) = BaseDirs::new() {
@@ -74,8 +64,14 @@ fn main() {
 
         //println!("You entered: {}", trimmed);
 
-        if trimmed.to_lowercase().contains("exit") {
+        if trimmed.to_lowercase() == "exit" {
             break;
+        } else if trimmed.to_lowercase() == "clear" {
+            events.clear();
+        } else if trimmed.to_lowercase() == "list" {
+            for event in &events {
+                println!("{event:?}");
+            }
         }
 
         if trimmed.to_lowercase().starts_with("add") {
