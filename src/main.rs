@@ -2,7 +2,11 @@ use std::io::{self, Write};
 use chrono::{NaiveDate, NaiveTime, NaiveDateTime, Local};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use serde_json::Result;
+//use serde_json::Result;
+use std::env;
+use directories::BaseDirs;
+use std::fs;
+use std::path::PathBuf;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Event {
@@ -12,6 +16,48 @@ struct Event {
 
 fn main() {
     let mut events: Vec<Event> = Vec::new();
+
+    match env::current_dir() {
+        Ok(path) => {
+            println!("Current working directory: {}", path.display());
+        }
+        Err(e) => {
+            eprintln!("Error getting current directory: {}", e);
+        }
+    }
+    
+    let data_file_path: Option<PathBuf>;
+
+    if let Some(base_dirs) = BaseDirs::new() {
+        let data_base_dir = base_dirs.data_dir();
+
+        println!("Data Directory: {:?}", data_base_dir);
+
+        let data_dir = data_base_dir.join("RustyPlanner");
+
+        fs::create_dir_all(data_dir.clone()).expect("Failed to create data directory");
+
+        data_file_path = Some(data_dir.join("dates.json"));
+
+    } else {
+        eprintln!("Could not find base directories.");
+        data_file_path = None;
+    }
+
+    if let Some(dfp) = &data_file_path {
+        match read_events_from_file(dfp) {
+            Ok(loaded_events) => {
+                events.extend(loaded_events);
+                println!("Events loaded from file:");
+                for event in &events {
+                    println!("Event name: {}, Event datetime: {}", event.name, event.timedate);
+                }
+            }
+            Err(e) => {
+                eprintln!("Failed to read events from file: {}", e);
+            }
+        }
+    }
 
     loop {
         let mut input = String::new();
@@ -44,12 +90,22 @@ fn main() {
             }
         }
     }
-    
+
     // Convert the vector of events to a JSON string
     let json_string = serde_json::to_string(&events).expect("Failed to convert to JSON");
 
     // Print the JSON string
     println!("{}", json_string);
+
+    if let Some(dfp) = data_file_path {
+        if let Err(e) = fs::write(dfp, json_string) {
+            eprintln!("Failed to save file: {}", e);
+        } else {
+            println!("Events saved successfully.");
+        }
+    } else {
+        println!("Didn't save file due to missing data directory.");
+    }
 }
 
 fn parse_add(add_str: &str) -> Option<Event> {
@@ -109,11 +165,6 @@ fn parse_datetime(date_str: &str, time_str: &str) -> Option<NaiveDateTime> {
         }
     };
 
-    //match date {
-    //    Some(d) => println!("The date is: {}", d),
-    //    None => println!("No date available"),
-    //}
-
     // Parse the time
     let time = if time_str.contains(':') {
         if time_str.to_lowercase().contains("am") || time_str.to_lowercase().contains("pm") {
@@ -126,11 +177,6 @@ fn parse_datetime(date_str: &str, time_str: &str) -> Option<NaiveDateTime> {
         None
     };
 
-    //match time {
-    //    Some(t) => println!("The time is: {}", t),
-    //    None => println!("No time available"),
-    //}
-
     // Combine date and time
     match (date, time) {
         (Some(d), Some(t)) => Some(NaiveDateTime::new(d, t)),
@@ -138,3 +184,12 @@ fn parse_datetime(date_str: &str, time_str: &str) -> Option<NaiveDateTime> {
     }
 }
 
+fn read_events_from_file(file_path: &PathBuf) -> Result<Vec<Event>, io::Error> {
+    // Read the file contents
+    let data = fs::read_to_string(file_path)
+        .expect("Unable to read file");
+
+    // Deserialize the JSON string into a Vec<Event>
+    let events: Vec<Event> = serde_json::from_str(&data)?;
+    Ok(events)
+}
