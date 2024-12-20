@@ -10,8 +10,11 @@ struct Event {
 }
 
 fn main() {
-    let mut input = String::new();
+    let mut events: Vec<Event> = Vec::new();
+
     loop {
+        let mut input = String::new();
+
         // Read from standard input
         print!("Please enter some input: ");
         io::stdout().flush().unwrap();
@@ -30,6 +33,14 @@ fn main() {
 
         if trimmed.to_lowercase().starts_with("add") {
             let event = parse_add(trimmed);
+            match event {
+                Some(e) => {
+                    println!("event name: {}", e.name);
+                    println!("event datetime: {}", e.timedate);
+                    events.push(e);
+                },
+                None => println!("event couldnt be parsed!"),
+            }
         }
     }
 }
@@ -87,14 +98,14 @@ fn parse_datetime(date_str: &str, time_str: &str) -> Option<NaiveDateTime> {
             NaiveDate::parse_from_str(date_str, "%d.%m.%Y").ok()
                 .or_else(|| NaiveDate::parse_from_str(date_str, "%d.%m").ok())
         } else {
-            Some(Local::now().naive_utc().date()) // Get today's date in UTC
+            unreachable!("This should not be valid {}", date_str)
         }
     };
 
-    match date {
-        Some(d) => println!("The date is: {}", d),
-        None => println!("No date available"),
-    }
+    //match date {
+    //    Some(d) => println!("The date is: {}", d),
+    //    None => println!("No date available"),
+    //}
 
     // Parse the time
     let time = if time_str.contains(':') {
@@ -108,10 +119,10 @@ fn parse_datetime(date_str: &str, time_str: &str) -> Option<NaiveDateTime> {
         None
     };
 
-    match time {
-        Some(t) => println!("The time is: {}", t),
-        None => println!("No time available"),
-    }
+    //match time {
+    //    Some(t) => println!("The time is: {}", t),
+    //    None => println!("No time available"),
+    //}
 
     // Combine date and time
     match (date, time) {
