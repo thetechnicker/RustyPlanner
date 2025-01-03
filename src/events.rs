@@ -30,8 +30,8 @@ impl EventManager {
 
     pub fn list_events(&self) {
         println!("Events:");
-        for event in &self.events {
-            println!("\t{event:?}");
+        for (index, event) in self.events.iter().enumerate() {
+            println!("\t{index}: {event:?}");
         }
     }
 
@@ -41,7 +41,7 @@ impl EventManager {
         let json_string = serde_json::to_string(&self.events).expect("Failed to convert to JSON");
 
         // Print the JSON string
-        println!("{}", json_string);
+        // println!("{}", json_string);
         if let Err(e) = fs::write(&self.file_path, json_string) {
             eprintln!("Failed to save file: {}", e);
         } else {
