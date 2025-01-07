@@ -24,7 +24,7 @@ impl EventManager {
             events: Vec::new(),
         };
         event_manager.read_events_from_file();
-        event_manager.list_events();
+        //event_manager.list_events();
         event_manager
     }
 
@@ -142,6 +142,9 @@ impl EventManager {
 
     pub fn clear(&mut self){
         self.events.clear();
+        if self.auto_save {
+            self.save_events();
+        }
     }
 }
 

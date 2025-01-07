@@ -45,6 +45,7 @@ fn main() {
     if args.len() > 1 {
         command_mode(&mut event_manager, &args[1..]);
     } else {
+        event_manager.list_events();
         loop_mode(&mut event_manager);
     }
 }
