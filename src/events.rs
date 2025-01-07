@@ -139,35 +139,9 @@ impl EventManager {
             }
         }
     }
+
+    pub fn clear(&mut self){
+        self.events.clear();
+    }
 }
 
-/*
-   pub fn save_events(data_file_path: &Option<PathBuf>, events: &Vec<Event>) {
-   println!("saved Events");
-// Convert the vector of events to a JSON string
-let json_string = serde_json::to_string(&events).expect("Failed to convert to JSON");
-
-// Print the JSON string
-println!("{}", json_string);
-if let Some(dfp) = data_file_path {
-if let Err(e) = fs::write(dfp, json_string) {
-eprintln!("Failed to save file: {}", e);
-} else {
-println!("Events saved successfully.");
-}
-} else {
-println!("Didn't save file due to missing data directory.");
-}
-}
-
-
-pub fn read_events_from_file(file_path: &PathBuf) -> Result<Vec<Event>> {
-// Read the file contents
-let data = fs::read_to_string(file_path)
-.expect("Unable to read file");
-
-// Deserialize the JSON string into a Vec<Event>
-let events: Vec<Event> = serde_json::from_str(&data)?;
-Ok(events)
-}
-*/
