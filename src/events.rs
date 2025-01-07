@@ -50,12 +50,15 @@ impl EventManager {
     }
 
     pub fn read_events_from_file(&mut self) {
-        // Read the file contents
-        let data = fs::read_to_string(&self.file_path)
-            .expect("Unable to read file");
+        if self.file_path.exists() {
+            // Read the file contents
+            // println!("{}", &self.file_path.display());
+            let data = fs::read_to_string(&self.file_path)
+                .expect("Unable to read file");
 
-        if let Ok(Some(events)) = serde_json::from_str(&data) {
-            self.events=events;
+            if let Ok(Some(events)) = serde_json::from_str(&data) {
+                self.events=events;
+            }
         }
     }
 
