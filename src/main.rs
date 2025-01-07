@@ -12,7 +12,7 @@ use std::env;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-    
+
     let data_file_path: Option<PathBuf>;
 
     if let Some(base_dirs) = BaseDirs::new() {
@@ -43,7 +43,7 @@ fn main() {
     event_manager.read_events_from_file();
 
     if args.len() > 1 {
-         command_mode(&mut event_manager, &args[1..]);
+        command_mode(&mut event_manager, &args[1..]);
     } else {
         loop_mode(&mut event_manager);
     }
@@ -78,28 +78,46 @@ fn loop_mode(event_manager: &mut EventManager){
 
         if trimmed.to_lowercase() == "exit" {
             break;
-        } else if trimmed.to_lowercase() == "clear" {
-            event_manager.clear();
-        } else if trimmed.to_lowercase() == "list" {
-            event_manager.list_events();
-        }
-
-        if trimmed.to_lowercase().starts_with("add") {
-            event_manager.add_event_from_str(trimmed);
+        } else {
+            parse_commands(&trimmed, event_manager);
         }
     }
 }
+
 
 fn command_mode(event_manager: &mut EventManager, commands: &[String]) {
     let command = commands.join(" ");
-    
-    if command.starts_with("add") {
-        event_manager.add_event_from_str(&command);
-    } else if command == "list" {
-        event_manager.list_events();
-    } else if command == "clear" {
-        event_manager.clear();
-    } else {
-        eprintln!("Unknown command: {}", command);
+
+    parse_commands(&command, event_manager);
+}
+
+fn parse_commands(command: &str, event_manager: &mut EventManager) {
+    match command {
+        _ if command.starts_with("add") => {
+            event_manager.add_event_from_str(command);
+        }
+        "list" => {
+            event_manager.list_events();
+        }
+        "clear" => {
+            event_manager.clear();
+        }
+        "help" => {
+            print_help();
+        }
+        _ => {
+            eprintln!("Unknown command: {}", command);
+            print_help(); // Suggest help for valid commands
+        }
     }
 }
+
+fn print_help() {
+    println!("Available commands:");
+    println!("  add <event details> - Add a new event");
+    println!("  list                - List all events");
+    println!("  clear               - Clear all events");
+    println!("  help                - Show this help message");
+    println!("  exit                - Exit the application");
+}
+
