@@ -74,14 +74,17 @@ fn service_start(){
         .arg("run")
         .arg("--bin")
         .arg("background_service")
+        .arg(if cfg!(debug_assertions) { "" } else { "--release" })
         .spawn()
         .expect("Failed to start background service");
 }
 
 fn service_stop(){
+    let build_type = if cfg!(debug_assertions) { "debug" } else { "release" };
+    let service_name = format!("target/{}/background_service", build_type);
     let _output = Command::new("pkill")
         .arg("-f")
-        .arg("target/debug/background_service")
+        .arg(service_name)
         .output()
         .expect("Failed to stop background service");
     println!("Service stopped, output: {:?}", _output);
