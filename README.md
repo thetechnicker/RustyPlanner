@@ -36,12 +36,6 @@ You can also use the application directly from the command line with the followi
 - `help` - Show this help message
 - `exit` - Exit the application (interactive mode only)
 
-### Event Detais
-
-- **Name**
-- **Time**
-- **Date** (optional)
-
 ## Dependencies
 
 RustyPlanner depends on the following crates:

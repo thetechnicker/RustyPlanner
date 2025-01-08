@@ -3,6 +3,9 @@ name = "RustyPlanner"
 version = "0.1.0"
 edition = "2021"
 default-run = "RustyPlanner"
+readme = "README.md"
+license = "MIT"
+description = "A command-line tool for managing your appointments and events."
 
 [[bin]]
 name = "background_service"
