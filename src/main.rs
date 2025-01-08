@@ -6,9 +6,7 @@ use directories::BaseDirs;
 use std::fs;
 use std::path::PathBuf;
 use std::env;
-//use notify_rust::Notification;
-
-
+use std::process::Command;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -43,25 +41,58 @@ fn main() {
     event_manager.read_events_from_file();
 
     if args.len() > 1 {
-        command_mode(&mut event_manager, &args[1..]);
+        if args[1] == "service" {
+            if args.len() > 2 {
+                match args[2].as_str() {
+                    "start" => {
+                        service_start();
+                    }
+                    "stop" => {
+                        service_stop();
+                    }
+                    "restart" => {
+                        service_restart();
+                    }
+                    _ => {
+                        eprintln!("Unknown service command: {}", args[2]);
+                    }
+                }
+            } else {
+                eprintln!("Service command required");
+            }
+        } else {
+            command_mode(&mut event_manager, &args[1..]);
+        }
     } else {
         event_manager.list_events();
         loop_mode(&mut event_manager);
     }
 }
 
+fn service_start(){
+    let _child = Command::new("cargo")
+        .arg("run")
+        .arg("--bin")
+        .arg("background_service")
+        .spawn()
+        .expect("Failed to start background service");
+}
+
+fn service_stop(){
+    let _output = Command::new("pkill")
+        .arg("-f")
+        .arg("target/debug/background_service")
+        .output()
+        .expect("Failed to stop background service");
+    println!("Service stopped, output: {:?}", _output);
+}
+
+fn service_restart(){
+    service_stop();
+    service_start();
+}
+
 fn loop_mode(event_manager: &mut EventManager){
-    //let mut events: Vec<Event> = Vec::new();
-
-    /*
-       Notification::new()
-       .summary("Firefox News")
-       .body("This will almost look like a real firefox notification.")
-       .icon("firefox")
-       .show();
-       */
-
-
     loop {
         let mut input = String::new();
 
