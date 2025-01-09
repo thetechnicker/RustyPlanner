@@ -10,20 +10,31 @@ pub struct Event {
     pub name: String,
 }
 
+pub enum EventManagerMode {
+    Active,  // manages events, has read/write access
+    Passive, // handles notification, read only
+}
+
 pub struct EventManager {
     file_path: PathBuf,
     auto_save: bool,
     events: Vec<Event>,
+    mode: EventManagerMode,
 }
 
 impl EventManager {
-    pub fn new(file_path: PathBuf, auto_save: bool)-> EventManager {
+    pub fn new(file_path: PathBuf, auto_save: bool, mode: EventManagerMode) -> EventManager {
         let mut event_manager = EventManager {
             file_path,
             auto_save,
             events: Vec::new(),
+            mode,
         };
         event_manager.read_events_from_file();
+
+        if let EventManagerMode::Passive = event_manager.mode{
+            println!("some helpful message")
+        }
         //event_manager.list_events();
         event_manager
     }
@@ -35,17 +46,22 @@ impl EventManager {
         }
     }
 
+    
     pub fn save_events(&self) {
-        println!("saved Events");
-        // Convert the vector of events to a JSON string
-        let json_string = serde_json::to_string(&self.events).expect("Failed to convert to JSON");
+        if let EventManagerMode::Active = self.mode {
+            println!("saved Events");
+            // Convert the vector of events to a JSON string
+            let json_string = serde_json::to_string(&self.events).expect("Failed to convert to JSON");
 
-        // Print the JSON string
-        // println!("{}", json_string);
-        if let Err(e) = fs::write(&self.file_path, json_string) {
-            eprintln!("Failed to save file: {}", e);
+            // Print the JSON string
+            // println!("{}", json_string);
+            if let Err(e) = fs::write(&self.file_path, json_string) {
+                eprintln!("Failed to save file: {}", e);
+            } else {
+                println!("Events saved successfully.");
+            }
         } else {
-            println!("Events saved successfully.");
+            println!("Cannot save events in Passive mode.");
         }
     }
 
@@ -100,51 +116,60 @@ impl EventManager {
         }
     }
 
-    pub fn add_event_from_str(&mut self, add_str: &str){
-        // Define regex patterns for time and date
-        let time_pattern = Regex::new(r"(?i)\b(1[0-2]|0?[1-9]):([0-5][0-9]) ?([AP]M)?|([01]?[0-9]|2[0-3])(:[0-5][0-9]){0,2}\b").unwrap();
-        let date_pattern = Regex::new(r"(?i)\b(\d{2}\.\d{2}(\.\d{4})?|\d{2}/\d{2}/\d{4}|\d{4}-\d{2}-\d{2}|[A-Za-z]+ \d{1,2}, \d{4})\b").unwrap();
+    pub fn add_event_from_str(&mut self, add_str: &str) {
+        if let EventManagerMode::Active = self.mode {
+            // Define regex patterns for time and date
+            let time_pattern = Regex::new(r"(?i)\b(1[0-2]|0?[1-9]):([0-5][0-9]) ?([AP]M)?|([01]?[0-9]|2[0-3])(:[0-5][0-9]){0,2}\b").unwrap();
+            let date_pattern = Regex::new(r"(?i)\b(\d{2}\.\d{2}(\.\d{4})?|\d{2}/\d{2}/\d{4}|\d{4}-\d{2}-\d{2}|[A-Za-z]+ \d{1,2}, \d{4})\b").unwrap();
 
-        // Extract the part after "add "
-        let entry = add_str.strip_prefix("add ").unwrap_or(add_str);
+            // Extract the part after "add "
+            let entry = add_str.strip_prefix("add ").unwrap_or(add_str);
 
-        // Extract time
-        let time_match = time_pattern.find(entry);
-        let time_str = time_match.map(|m| m.as_str());
+            // Extract time
+            let time_match = time_pattern.find(entry);
+            let time_str = time_match.map(|m| m.as_str());
 
-        // Extract date
-        let date_match = date_pattern.find(entry);
-        let date_str = date_match.map(|m| m.as_str());
+            // Extract date
+            let date_match = date_pattern.find(entry);
+            let date_str = date_match.map(|m| m.as_str());
 
 
-        // Extract name
-        let mut name = entry.to_string();
-        let mut time = String::new();
-        let mut date = String::new();
-        if let Some(_time) = time_str {
-            time=_time.trim().to_string();
-            name = name.replace(_time, "").trim().to_string();
+            // Extract name
+            let mut name = entry.to_string();
+            let mut time = String::new();
+            let mut date = String::new();
+            if let Some(_time) = time_str {
+                time=_time.trim().to_string();
+                name = name.replace(_time, "").trim().to_string();
+            }
+            if let Some(_date) = date_str {
+                date=_date.trim().to_string();
+                name = name.replace(_date, "").trim().to_string();
+            }
+
+            let datetime_opt = self.parse_datetime(&date, &time);
+
+            if let Some(datetime) = datetime_opt {
+                self.events.push(Event {timedate: datetime, name});
+                if self.auto_save {
+                    self.save_events();
+                }
+            }
+        } else {
+            println!("Cannot add events in Passive mode.");
         }
-        if let Some(_date) = date_str {
-            date=_date.trim().to_string();
-            name = name.replace(_date, "").trim().to_string();
-        }
+    }
 
-        let datetime_opt = self.parse_datetime(&date, &time);
-
-        if let Some(datetime) = datetime_opt {
-            self.events.push(Event {timedate: datetime, name});
+    pub fn clear(&mut self) {
+        if let EventManagerMode::Active = self.mode {
+            self.events.clear();
             if self.auto_save {
                 self.save_events();
             }
+        } else {
+            println!("Cannot clear events in Passive mode.");
         }
     }
 
-    pub fn clear(&mut self){
-        self.events.clear();
-        if self.auto_save {
-            self.save_events();
-        }
-    }
 }
 
