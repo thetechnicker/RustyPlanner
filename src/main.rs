@@ -1,6 +1,6 @@
 mod events;
 
-use events::EventManager;
+use events::{EventManager, EventManagerMode};
 use std::io::{self, Write};
 use directories::BaseDirs;
 use std::fs;
@@ -32,7 +32,7 @@ fn main() {
     let mut event_manager: EventManager;
 
     if let Some(dfp) = &data_file_path {
-        event_manager = EventManager::new(dfp.clone(), true);
+        event_manager = EventManager::new(dfp.clone(), true, EventManagerMode::Active);
     } else {
         eprintln!("error cant create Config file");
         return;
