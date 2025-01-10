@@ -6,6 +6,7 @@ use events::{EventManager, EventManagerMode};
 use std::path::PathBuf;
 use directories::BaseDirs;
 use std::fs;
+use std::sync::{Arc, Mutex};
 
 fn main() {
     let data_file_path: Option<PathBuf>;
@@ -26,7 +27,7 @@ fn main() {
         data_file_path = None;
     }
 
-    let mut event_manager: EventManager;
+    let event_manager: Arc<Mutex<EventManager>>;
 
     if let Some(dfp) = &data_file_path {
         event_manager = EventManager::new(dfp.clone(), true, EventManagerMode::Passive);
@@ -35,11 +36,11 @@ fn main() {
         return;
     }
 
-    // event_manager.read_events_from_file();
+    // event_manager.lock().unwrap().read_events_from_file();
 
     loop {
         println!("Background service is running...");
-        event_manager.list_events();
-        thread::sleep(Duration::from_secs(5));
+        event_manager.lock().unwrap().list_events();
+        thread::sleep(Duration::from_secs(1));
     }
 }

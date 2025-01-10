@@ -26,7 +26,7 @@ pub struct EventManager {
 }
 
 impl EventManager {
-    pub fn new(file_path: PathBuf, auto_save: bool, mode: EventManagerMode) -> EventManager {
+    pub fn new(file_path: PathBuf, auto_save: bool, mode: EventManagerMode) -> Arc<Mutex<EventManager>> {
         if let EventManagerMode::Passive = mode {
             if !file_path.exists() {
                 eprintln!("Error: File to monitor does not exist: {:?}", file_path);
@@ -34,19 +34,19 @@ impl EventManager {
             }
         }
 
-        let event_manager = EventManager {
+        let event_manager = Arc::new(Mutex::new(EventManager {
             file_path: file_path.clone(),
             auto_save,
             events: Vec::new(),
             mode,
-        };
-        
+        }));
 
-        if let EventManagerMode::Passive = event_manager.mode {
+
+        if let EventManagerMode::Passive = event_manager.lock().unwrap().mode {
             println!("some helpful message");
-            EventManager::monitor_file(event_manager, file_path);
+            EventManager::monitor_file(event_manager.clone(), file_path);
         }
-        //event_manager.lock().unwrap().list_events();
+
         event_manager
     }
 
@@ -192,6 +192,7 @@ impl EventManager {
         std::thread::spawn(move || {
             let file_path = file_path.clone();
             loop {
+                println!("Waiting for file changes...");
                 match rx.recv() {
                     Ok(Ok(NotifyEvent { kind: notify::EventKind::Modify(_), .. })) => {
                         println!("File modified: {:?}", file_path);

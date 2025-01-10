@@ -7,6 +7,7 @@ use std::fs;
 use std::path::PathBuf;
 use std::env;
 use std::process::Command;
+use std::sync::{Arc, Mutex};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -29,7 +30,7 @@ fn main() {
         data_file_path = None;
     }
 
-    let mut event_manager: EventManager;
+    let event_manager: Arc<Mutex<EventManager>>;
 
     if let Some(dfp) = &data_file_path {
         event_manager = EventManager::new(dfp.clone(), true, EventManagerMode::Active);
@@ -38,7 +39,7 @@ fn main() {
         return;
     }
 
-    event_manager.read_events_from_file();
+    event_manager.lock().unwrap().read_events_from_file();
 
     if args.len() > 1 {
         if args[1] == "service" {
@@ -61,11 +62,11 @@ fn main() {
                 eprintln!("Service command required");
             }
         } else {
-            command_mode(&mut event_manager, &args[1..]);
+            command_mode(&event_manager, &args[1..]);
         }
     } else {
-        event_manager.list_events();
-        loop_mode(&mut event_manager);
+        event_manager.lock().unwrap().list_events();
+        loop_mode(&event_manager);
     }
 }
 
@@ -95,7 +96,7 @@ fn service_restart(){
     service_start();
 }
 
-fn loop_mode(event_manager: &mut EventManager){
+fn loop_mode(event_manager: &Arc<Mutex<EventManager>>){
     loop {
         let mut input = String::new();
 
@@ -120,22 +121,25 @@ fn loop_mode(event_manager: &mut EventManager){
 }
 
 
-fn command_mode(event_manager: &mut EventManager, commands: &[String]) {
+fn command_mode(event_manager: &Arc<Mutex<EventManager>>, commands: &[String]) {
     let command = commands.join(" ");
 
     parse_commands(&command, event_manager);
 }
 
-fn parse_commands(command: &str, event_manager: &mut EventManager) {
+fn parse_commands(command: &str, event_manager: &Arc<Mutex<EventManager>>) {
     match command {
         _ if command.starts_with("add") => {
-            event_manager.add_event_from_str(command);
+            event_manager.lock().unwrap().add_event_from_str(command);
+        }
+        _ if command.starts_with("save") => {
+            event_manager.lock().unwrap().save_events();
         }
         "list" => {
-            event_manager.list_events();
+            event_manager.lock().unwrap().list_events();
         }
         "clear" => {
-            event_manager.clear();
+            event_manager.lock().unwrap().clear();
         }
         "help" => {
             print_help();
