@@ -3,6 +3,8 @@ use chrono::{NaiveTime, NaiveDate, NaiveDateTime, Local};
 use std::fs;
 use std::path::PathBuf;
 use regex::Regex;
+use notify::{Watcher, RecursiveMode, RecommendedWatcher, Event as NotifyEvent};
+
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Event {
@@ -24,16 +26,24 @@ pub struct EventManager {
 
 impl EventManager {
     pub fn new(file_path: PathBuf, auto_save: bool, mode: EventManagerMode) -> EventManager {
+        if let EventManagerMode::Passive = mode {
+            if !file_path.exists() {
+                eprintln!("Error: File to monitor does not exist: {:?}", file_path);
+                std::process::exit(1);
+            }
+        }
+
         let mut event_manager = EventManager {
-            file_path,
+            file_path: file_path.clone(),
             auto_save,
             events: Vec::new(),
             mode,
         };
         event_manager.read_events_from_file();
 
-        if let EventManagerMode::Passive = event_manager.mode{
-            println!("some helpful message")
+        if let EventManagerMode::Passive = event_manager.mode {
+            println!("some helpful message");
+            event_manager.monitor_file(file_path);
         }
         //event_manager.list_events();
         event_manager
@@ -170,6 +180,34 @@ impl EventManager {
             println!("Cannot clear events in Passive mode.");
         }
     }
+    
+    pub fn monitor_file(file_path: PathBuf) {
+        let (tx, rx) = std::sync::mpsc::channel();
+        let file_path = std::sync::Arc::new(std::sync::Mutex::new(file_path));
 
+        let mut watcher: RecommendedWatcher = Watcher::new(tx, notify::Config::default()).unwrap();
+        watcher.watch(file_path.lock().unwrap().as_ref(), RecursiveMode::NonRecursive).unwrap();
+
+        std::thread::spawn(move || {
+            loop {
+                match rx.recv() {
+                    Ok(Ok(NotifyEvent { kind: notify::EventKind::Modify(_), .. })) => {
+                        println!("File modified: {:?}", file_path);
+                        self
+                    },
+                    Ok(Ok(event)) => {
+                        println!("Other event: {:?}", event);
+                    },
+                    Ok(Err(e)) => {
+                        println!("Notify error: {:?}", e);
+                    },
+                    Err(e) => {
+                        println!("Watch error: {:?}", e);
+                        break;
+                    }
+                }
+            }
+        });
+    }
 }
 
