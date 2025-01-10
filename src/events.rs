@@ -4,6 +4,7 @@ use std::fs;
 use std::path::PathBuf;
 use regex::Regex;
 use notify::{Watcher, RecursiveMode, RecommendedWatcher, Event as NotifyEvent};
+use std::sync::{Arc, Mutex};
 
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -33,19 +34,19 @@ impl EventManager {
             }
         }
 
-        let mut event_manager = EventManager {
+        let event_manager = EventManager {
             file_path: file_path.clone(),
             auto_save,
             events: Vec::new(),
             mode,
         };
-        event_manager.read_events_from_file();
+        
 
         if let EventManagerMode::Passive = event_manager.mode {
             println!("some helpful message");
-            event_manager.monitor_file(file_path);
+            EventManager::monitor_file(event_manager, file_path);
         }
-        //event_manager.list_events();
+        //event_manager.lock().unwrap().list_events();
         event_manager
     }
 
@@ -181,19 +182,20 @@ impl EventManager {
         }
     }
     
-    pub fn monitor_file(file_path: PathBuf) {
+    pub fn monitor_file(event_manager: Arc<Mutex<EventManager>>, file_path: PathBuf) {
         let (tx, rx) = std::sync::mpsc::channel();
-        let file_path = std::sync::Arc::new(std::sync::Mutex::new(file_path));
+        let file_path = Arc::new(Mutex::new(file_path.clone()));
 
         let mut watcher: RecommendedWatcher = Watcher::new(tx, notify::Config::default()).unwrap();
         watcher.watch(file_path.lock().unwrap().as_ref(), RecursiveMode::NonRecursive).unwrap();
 
         std::thread::spawn(move || {
+            let file_path = file_path.clone();
             loop {
                 match rx.recv() {
                     Ok(Ok(NotifyEvent { kind: notify::EventKind::Modify(_), .. })) => {
                         println!("File modified: {:?}", file_path);
-                        self
+                        event_manager.lock().unwrap().read_events_from_file();
                     },
                     Ok(Ok(event)) => {
                         println!("Other event: {:?}", event);
