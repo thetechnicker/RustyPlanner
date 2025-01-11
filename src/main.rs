@@ -1,11 +1,11 @@
 mod events;
 
-use events::{EventManager, EventManagerMode};
-use std::io::{self, Write};
 use directories::BaseDirs;
-use std::fs;
-use std::path::PathBuf;
+use events::{EventManager, EventManagerMode};
 use std::env;
+use std::fs;
+use std::io::{self, Write};
+use std::path::PathBuf;
 use std::process::Command;
 use std::sync::{Arc, Mutex};
 
@@ -24,7 +24,6 @@ fn main() {
         fs::create_dir_all(data_dir.clone()).expect("Failed to create data directory");
 
         data_file_path = Some(data_dir.join("dates.json"));
-
     } else {
         eprintln!("Could not find base directories.");
         data_file_path = None;
@@ -70,18 +69,26 @@ fn main() {
     }
 }
 
-fn service_start(){
+fn service_start() {
     let _child = Command::new("cargo")
         .arg("run")
         .arg("--bin")
         .arg("background_service")
-        .arg(if cfg!(debug_assertions) { "" } else { "--release" })
+        .arg(if cfg!(debug_assertions) {
+            ""
+        } else {
+            "--release"
+        })
         .spawn()
         .expect("Failed to start background service");
 }
 
-fn service_stop(){
-    let build_type = if cfg!(debug_assertions) { "debug" } else { "release" };
+fn service_stop() {
+    let build_type = if cfg!(debug_assertions) {
+        "debug"
+    } else {
+        "release"
+    };
     let service_name = format!("target/{}/background_service", build_type);
     let _output = Command::new("pkill")
         .arg("-f")
@@ -91,12 +98,12 @@ fn service_stop(){
     println!("Service stopped, output: {:?}", _output);
 }
 
-fn service_restart(){
+fn service_restart() {
     service_stop();
     service_start();
 }
 
-fn loop_mode(event_manager: &Arc<Mutex<EventManager>>){
+fn loop_mode(event_manager: &Arc<Mutex<EventManager>>) {
     loop {
         let mut input = String::new();
 
@@ -119,7 +126,6 @@ fn loop_mode(event_manager: &Arc<Mutex<EventManager>>){
         }
     }
 }
-
 
 fn command_mode(event_manager: &Arc<Mutex<EventManager>>, commands: &[String]) {
     let command = commands.join(" ");
@@ -159,4 +165,3 @@ fn print_help() {
     println!("  help                - Show this help message");
     println!("  exit                - Exit the application");
 }
-

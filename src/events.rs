@@ -1,11 +1,13 @@
-use serde::{Deserialize, Serialize};
-use chrono::{NaiveTime, NaiveDate, NaiveDateTime, Local};
-use std::fs;
-use std::path::PathBuf;
+use chrono::{Local, NaiveDate, NaiveDateTime, NaiveTime};
+use futures::channel::mpsc::{channel, Receiver};
+use futures::{SinkExt, StreamExt};
+use notify::{Config, RecommendedWatcher};
+use notify::{Event as NotifyEvent, RecursiveMode, Result, Watcher};
 use regex::Regex;
-use notify::{Watcher, RecursiveMode, RecommendedWatcher, Event as NotifyEvent};
+use serde::{Deserialize, Serialize};
+use std::fs;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
-
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Event {
@@ -26,7 +28,11 @@ pub struct EventManager {
 }
 
 impl EventManager {
-    pub fn new(file_path: PathBuf, auto_save: bool, mode: EventManagerMode) -> Arc<Mutex<EventManager>> {
+    pub fn new(
+        file_path: PathBuf,
+        auto_save: bool,
+        mode: EventManagerMode,
+    ) -> Arc<Mutex<EventManager>> {
         if let EventManagerMode::Passive = mode {
             if !file_path.exists() {
                 eprintln!("Error: File to monitor does not exist: {:?}", file_path);
@@ -41,9 +47,10 @@ impl EventManager {
             mode,
         }));
 
+        event_manager.lock().unwrap().read_events_from_file();
 
         if let EventManagerMode::Passive = event_manager.lock().unwrap().mode {
-            println!("some helpful message");
+            println!("Monitoring file: {:?}", file_path);
             EventManager::monitor_file(event_manager.clone(), file_path);
         }
 
@@ -57,12 +64,12 @@ impl EventManager {
         }
     }
 
-    
     pub fn save_events(&self) {
         if let EventManagerMode::Active = self.mode {
             println!("saved Events");
             // Convert the vector of events to a JSON string
-            let json_string = serde_json::to_string(&self.events).expect("Failed to convert to JSON");
+            let json_string =
+                serde_json::to_string(&self.events).expect("Failed to convert to JSON");
 
             // Print the JSON string
             // println!("{}", json_string);
@@ -80,11 +87,10 @@ impl EventManager {
         if self.file_path.exists() {
             // Read the file contents
             // println!("{}", &self.file_path.display());
-            let data = fs::read_to_string(&self.file_path)
-                .expect("Unable to read file");
+            let data = fs::read_to_string(&self.file_path).expect("Unable to read file");
 
             if let Ok(Some(events)) = serde_json::from_str(&data) {
-                self.events=events;
+                self.events = events;
             }
         }
     }
@@ -95,13 +101,16 @@ impl EventManager {
             Some(Local::now().naive_utc().date()) // Get today's date in UTC
         } else {
             if date_str.contains('/') {
-                NaiveDate::parse_from_str(date_str, "%d/%m/%Y").ok()
+                NaiveDate::parse_from_str(date_str, "%d/%m/%Y")
+                    .ok()
                     .or_else(|| NaiveDate::parse_from_str(date_str, "%d/%m").ok())
             } else if date_str.contains('-') {
-                NaiveDate::parse_from_str(date_str, "%d-%m-%Y").ok()
+                NaiveDate::parse_from_str(date_str, "%d-%m-%Y")
+                    .ok()
                     .or_else(|| NaiveDate::parse_from_str(date_str, "%d-%m").ok())
             } else if date_str.contains('.') {
-                NaiveDate::parse_from_str(date_str, "%d.%m.%Y").ok()
+                NaiveDate::parse_from_str(date_str, "%d.%m.%Y")
+                    .ok()
                     .or_else(|| NaiveDate::parse_from_str(date_str, "%d.%m").ok())
             } else {
                 unreachable!("This should not be valid {}", date_str)
@@ -113,7 +122,8 @@ impl EventManager {
             if time_str.to_lowercase().contains("am") || time_str.to_lowercase().contains("pm") {
                 NaiveTime::parse_from_str(time_str, "%I:%M %p").ok()
             } else {
-                NaiveTime::parse_from_str(time_str, "%H:%M").ok()
+                NaiveTime::parse_from_str(time_str, "%H:%M")
+                    .ok()
                     .or_else(|| NaiveTime::parse_from_str(time_str, "%H:%M:%S").ok())
             }
         } else {
@@ -144,24 +154,26 @@ impl EventManager {
             let date_match = date_pattern.find(entry);
             let date_str = date_match.map(|m| m.as_str());
 
-
             // Extract name
             let mut name = entry.to_string();
             let mut time = String::new();
             let mut date = String::new();
             if let Some(_time) = time_str {
-                time=_time.trim().to_string();
+                time = _time.trim().to_string();
                 name = name.replace(_time, "").trim().to_string();
             }
             if let Some(_date) = date_str {
-                date=_date.trim().to_string();
+                date = _date.trim().to_string();
                 name = name.replace(_date, "").trim().to_string();
             }
 
             let datetime_opt = self.parse_datetime(&date, &time);
 
             if let Some(datetime) = datetime_opt {
-                self.events.push(Event {timedate: datetime, name});
+                self.events.push(Event {
+                    timedate: datetime,
+                    name,
+                });
                 if self.auto_save {
                     self.save_events();
                 }
@@ -181,36 +193,49 @@ impl EventManager {
             println!("Cannot clear events in Passive mode.");
         }
     }
-    
+
     pub fn monitor_file(event_manager: Arc<Mutex<EventManager>>, file_path: PathBuf) {
-        let (tx, rx) = std::sync::mpsc::channel();
-        let file_path = Arc::new(Mutex::new(file_path.clone()));
-
-        let mut watcher: RecommendedWatcher = Watcher::new(tx, notify::Config::default()).unwrap();
-        watcher.watch(file_path.lock().unwrap().as_ref(), RecursiveMode::NonRecursive).unwrap();
-
         std::thread::spawn(move || {
-            let file_path = file_path.clone();
-            loop {
-                println!("Waiting for file changes...");
-                match rx.recv() {
-                    Ok(Ok(NotifyEvent { kind: notify::EventKind::Modify(_), .. })) => {
-                        println!("File modified: {:?}", file_path);
-                        event_manager.lock().unwrap().read_events_from_file();
-                    },
-                    Ok(Ok(event)) => {
-                        println!("Other event: {:?}", event);
-                    },
-                    Ok(Err(e)) => {
-                        println!("Notify error: {:?}", e);
-                    },
-                    Err(e) => {
-                        println!("Watch error: {:?}", e);
-                        break;
-                    }
+            futures::executor::block_on(async {
+                if let Err(e) = async_watch(event_manager, file_path).await {
+                    println!("error: {:?}", e)
                 }
-            }
+            });
         });
     }
 }
 
+fn async_watcher() -> notify::Result<(RecommendedWatcher, Receiver<notify::Result<NotifyEvent>>)> {
+    let (mut tx, rx) = channel(1);
+
+    let watcher = RecommendedWatcher::new(
+        move |res| {
+            futures::executor::block_on(async {
+                tx.send(res).await.unwrap();
+            })
+        },
+        Config::default(),
+    )?;
+
+    Ok((watcher, rx))
+}
+
+async fn async_watch(event_manager: Arc<Mutex<EventManager>>, path: PathBuf) -> notify::Result<()> {
+    let (mut watcher, mut rx) = async_watcher()?;
+
+    watcher.watch(path.as_ref(), RecursiveMode::Recursive)?;
+
+    while let Some(res) = rx.next().await {
+        match res {
+            Ok(event) => {
+                if event.kind.is_modify() {
+                    println!("changed: {:?}", event);
+                    event_manager.lock().unwrap().read_events_from_file();
+                }
+            }
+            Err(e) => println!("watch error: {:?}", e),
+        }
+    }
+
+    Ok(())
+}
