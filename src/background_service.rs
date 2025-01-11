@@ -1,12 +1,15 @@
 mod events;
+mod notification;
 
-use std::time::Duration;
-use std::thread;
-use events::{EventManager, EventManagerMode};
-use std::path::PathBuf;
 use directories::BaseDirs;
+use events::{EventManager, EventManagerMode};
+// use notify_rust::Notification;
+use notification::send_notification;
 use std::fs;
+use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
+use std::thread;
+use std::time::Duration;
 
 fn main() {
     let data_file_path: Option<PathBuf>;
@@ -21,7 +24,6 @@ fn main() {
         fs::create_dir_all(data_dir.clone()).expect("Failed to create data directory");
 
         data_file_path = Some(data_dir.join("dates.json"));
-
     } else {
         eprintln!("Could not find base directories.");
         data_file_path = None;
@@ -40,7 +42,20 @@ fn main() {
 
     loop {
         println!("Background service is running...");
-        event_manager.lock().unwrap().list_events();
+        // event_manager.lock().unwrap().list_events();
+        for (index, event) in event_manager.lock().unwrap().iter_events().enumerate() {
+            println!("\t{index}: {event:?}");
+            // is it time to notify the user?
+            if event.timedate <= chrono::Local::now().naive_local() {
+                println!("Time to notify the user!");
+                // Notification::new()
+                //     .summary(&event.name)
+                //     .body("")
+                //     .show()
+                //     .expect("Failed to show notification");
+                send_notification(&event.name, "");
+            }
+        }
         thread::sleep(Duration::from_secs(1));
     }
 }

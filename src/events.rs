@@ -194,6 +194,10 @@ impl EventManager {
         }
     }
 
+    pub fn iter_events(&self) -> impl Iterator<Item = &Event> {
+        self.events.iter()
+    }
+
     pub fn monitor_file(event_manager: Arc<Mutex<EventManager>>, file_path: PathBuf) {
         std::thread::spawn(move || {
             futures::executor::block_on(async {
