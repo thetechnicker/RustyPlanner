@@ -31,13 +31,14 @@ fn send_generic_notification(title: &str, message: &str) {
 }
 
 fn send_wsl_notification(title: &str, message: &str) {
-    println!("Sending WSL notification: {} - {}", title, message);
-    // Command::new("powershell.exe")
-    //     .arg("-Command")
-    //     .arg(format!(
-    //         "New-BurntToastNotification -Text '{}', '{}'",
-    //         title, message
-    //     ))
-    //     .output()
-    //     .expect("Failed to send notification");
+    let powershell_command = format!(
+        "powershell.exe -Command \"Import-Module BurntToast; New-BurntToastNotification -Text '{}', '{}'\"",
+        title, message
+    );
+
+    Command::new("sh")
+        .arg("-c")
+        .arg(powershell_command)
+        .output()
+        .expect("Failed to send WSL notification");
 }

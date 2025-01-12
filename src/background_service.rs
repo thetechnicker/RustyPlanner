@@ -48,14 +48,9 @@ fn main() {
             // is it time to notify the user?
             if event.timedate <= chrono::Local::now().naive_local() {
                 println!("Time to notify the user!");
-                // Notification::new()
-                //     .summary(&event.name)
-                //     .body("")
-                //     .show()
-                //     .expect("Failed to show notification");
                 send_notification(&event.name, "");
             }
         }
-        thread::sleep(Duration::from_secs(1));
+        thread::sleep(Duration::from_millis(100));
     }
 }
