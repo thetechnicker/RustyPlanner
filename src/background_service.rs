@@ -41,16 +41,29 @@ fn main() {
     // event_manager.lock().unwrap().read_events_from_file();
 
     loop {
-        println!("Background service is running...");
+        let time = chrono::Local::now().naive_local();
+        println!(
+            "{}: Background service is running...",
+            time.format("%Y-%m-%d %H:%M:%S")
+        );
         // event_manager.lock().unwrap().list_events();
-        for (index, event) in event_manager.lock().unwrap().iter_events().enumerate() {
+        for (index, event) in event_manager.lock().unwrap().iter_events_mut().enumerate() {
             println!("\t{index}: {event:?}");
             // is it time to notify the user?
-            if event.timedate <= chrono::Local::now().naive_local() {
+            if event.timedate <= chrono::Local::now().naive_local() && event.has_notified == false {
                 println!("Time to notify the user!");
-                send_notification(&event.name, "");
+                let message = format!(
+                    "Event: {}\nDescription: {}\nLocation {}\nDate: {}\nTime: {}",
+                    event.name,
+                    event.description.as_ref().unwrap_or(&String::from("")),
+                    event.location.as_ref().unwrap_or(&String::from("")),
+                    event.timedate.date(),
+                    event.timedate.time()
+                );
+                send_notification(&event.name, &message);
+                event.has_notified = true;
             }
         }
-        thread::sleep(Duration::from_millis(100));
+        thread::sleep(Duration::from_millis(250));
     }
 }

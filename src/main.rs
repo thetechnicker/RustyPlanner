@@ -70,32 +70,47 @@ fn main() {
 }
 
 fn service_start() {
-    let _child = Command::new("cargo")
-        .arg("run")
-        .arg("--bin")
-        .arg("background_service")
-        .arg(if cfg!(debug_assertions) {
-            ""
-        } else {
-            "--release"
-        })
-        .spawn()
-        .expect("Failed to start background service");
+    // Check if the binary is built locally or installed globally/for user
+    #[cfg(debug_assertions)]
+    {
+        println!("Running local build");
+        let _child = Command::new("cargo")
+            .arg("run")
+            .arg("--bin")
+            .arg("RustyPlanner_background_service")
+            .spawn()
+            .expect("Failed to start background service");
+    }
+    #[cfg(not(debug_assertions))]
+    {
+        println!("Running installed version");
+        let _child = Command::new("RustyPlanner_background_service")
+            .spawn()
+            .expect("Failed to start background service");
+    }
 }
 
 fn service_stop() {
-    let build_type = if cfg!(debug_assertions) {
-        "debug"
-    } else {
-        "release"
-    };
-    let service_name = format!("target/{}/background_service", build_type);
-    let _output = Command::new("pkill")
-        .arg("-f")
-        .arg(service_name)
-        .output()
-        .expect("Failed to stop background service");
-    println!("Service stopped, output: {:?}", _output);
+    #[cfg(debug_assertions)]
+    {
+        let service_name = "target/debug/background_service";
+        let _output = Command::new("pkill")
+            .arg("-f")
+            .arg(service_name)
+            .output()
+            .expect("Failed to stop background service");
+        println!("Service stopped, output: {:?}", _output);
+    }
+    #[cfg(not(debug_assertions))]
+    {
+        let service_name = "RustyPlanner_background_service";
+        let _output = Command::new("pkill")
+            .arg("-f")
+            .arg(service_name)
+            .output()
+            .expect("Failed to stop background service");
+        println!("Service stopped, output: {:?}", _output);
+    }
 }
 
 fn service_restart() {

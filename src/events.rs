@@ -13,6 +13,9 @@ use std::sync::{Arc, Mutex};
 pub struct Event {
     pub timedate: NaiveDateTime,
     pub name: String,
+    pub has_notified: bool,
+    pub description: Option<String>,
+    pub location: Option<String>,
 }
 
 pub enum EventManagerMode {
@@ -173,6 +176,9 @@ impl EventManager {
                 self.events.push(Event {
                     timedate: datetime,
                     name,
+                    has_notified: false,
+                    description: None,
+                    location: None,
                 });
                 if self.auto_save {
                     self.save_events();
@@ -196,6 +202,10 @@ impl EventManager {
 
     pub fn iter_events(&self) -> impl Iterator<Item = &Event> {
         self.events.iter()
+    }
+
+    pub fn iter_events_mut(&mut self) -> impl Iterator<Item = &mut Event> {
+        self.events.iter_mut()
     }
 
     pub fn monitor_file(event_manager: Arc<Mutex<EventManager>>, file_path: PathBuf) {

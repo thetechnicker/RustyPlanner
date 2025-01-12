@@ -8,7 +8,7 @@ license = "MIT"
 description = "A command-line tool for managing your appointments and events."
 
 [[bin]]
-name = "background_service"
+name = "RustyPlanner_background_service"
 path = "src/background_service.rs"
 
 [dependencies]
