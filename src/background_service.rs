@@ -50,15 +50,16 @@ fn main() {
         for (index, event) in event_manager.lock().unwrap().iter_events_mut().enumerate() {
             println!("\t{index}: {event:?}");
             // is it time to notify the user?
-            if event.timedate <= chrono::Local::now().naive_local() && event.has_notified == false {
+            let event_datetime = event.date.and_time(event.time);
+            if event_datetime <= chrono::Local::now().naive_local() && event.has_notified == false {
                 println!("Time to notify the user!");
                 let message = format!(
                     "Event: {}\nDescription: {}\nLocation {}\nDate: {}\nTime: {}",
                     event.name,
                     event.description.as_ref().unwrap_or(&String::from("")),
                     event.location.as_ref().unwrap_or(&String::from("")),
-                    event.timedate.date(),
-                    event.timedate.time()
+                    event.date,
+                    event.time
                 );
                 send_notification(&event.name, &message);
                 event.has_notified = true;

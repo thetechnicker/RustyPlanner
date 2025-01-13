@@ -166,7 +166,7 @@ fn parse_commands(command: &str, event_manager: &Arc<Mutex<EventManager>>) {
                             eprintln!("Error: Event not found at index {}", x);
                         }
                     }
-
+                    event_manager.lock().unwrap().save_events();
                 }
                 None => {
                     eprintln!("error")
@@ -263,22 +263,35 @@ fn parse_add(input: &str) -> Option<Event> {
             name += " ";
         } else {
             match mode{
-                ParseMode::Desc =>{
+                ParseMode::Desc => {
                     description += part;
                     description += " ";
                 }
-                ParseMode::Loc =>{
+                ParseMode::Loc => {
                     location += part;
                     location += " ";
                 }
-                ParseMode::AlarmTime =>{
+                ParseMode::AlarmTime => {
                     if allarm_time.is_none(){
                         allarm_time = Some(parse_duration(part).expect("Failed Parsing"));
-                        mode=ParseMode::None;
                     }
                 }
                 ParseMode::None => {
-                    println!("idk where to put {}", part);
+                    //println!("idk where to put {}", part);
+                }
+            }
+            match part {
+                "-d" =>{
+                    mode=ParseMode::Desc;
+                }
+                "-l" =>{
+                    mode=ParseMode::Loc;
+                }
+                "-a" =>{
+                    mode=ParseMode::AlarmTime;
+                }
+                _ =>{
+                    mode=ParseMode::None;
                 }
             }
         }
@@ -348,6 +361,8 @@ fn parse_duration(s: &str) -> Result<Duration, String> {
     
     // Capture groups for hours and minutes
     let caps = re.captures(trimmed).ok_or("Invalid format".to_string())?;
+
+        println!("Captured groups: {:?}", caps);
     
     // Parse hours and minutes
     let hours = caps.get(1).and_then(|m| m.as_str().parse::<i64>().ok()).unwrap_or(0);
