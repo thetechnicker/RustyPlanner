@@ -1,7 +1,10 @@
 mod events;
 
+use chrono::{Date, NaiveDate, NaiveTime};
 use directories::BaseDirs;
+use events::Event;
 use events::{EventManager, EventManagerMode};
+use regex::Regex;
 use std::env;
 use std::fs;
 use std::io::{self, Write};
@@ -151,10 +154,38 @@ fn command_mode(event_manager: &Arc<Mutex<EventManager>>, commands: &[String]) {
 fn parse_commands(command: &str, event_manager: &Arc<Mutex<EventManager>>) {
     match command {
         _ if command.starts_with("add") => {
-            event_manager.lock().unwrap().add_event_from_str(command);
+            parse_add(command);
+            // let x = event_manager.lock().unwrap().add_event_from_str(command);
+            // match event_manager.lock().unwrap().get_event(x) {
+            //     Some(event) => {
+            //         println!("Event '{}' saved at index {}", event.name, x);
+            //     }
+            //     None => {
+            //         eprintln!("Error: Event not found at index {}", x);
+            //     }
+            // }
         }
         _ if command.starts_with("save") => {
             event_manager.lock().unwrap().save_events();
+        }
+        _ if command.starts_with("remove") => {
+            let x: &str = command.strip_prefix("remove ").unwrap_or("");
+            match x.trim().parse::<usize>() {
+                Ok(index) => {
+                    let e = event_manager.lock().unwrap().remove_event(index);
+                    match e {
+                        Some(event) => {
+                            println!("Event '{}' removed from index {}", event.name, index);
+                        }
+                        None => {
+                            eprintln!("Error: Event not found at index {}", index);
+                        }
+                    }
+                }
+                Err(_) => {
+                    eprintln!("Invalid index: {}", x);
+                }
+            }
         }
         "list" => {
             event_manager.lock().unwrap().list_events();
@@ -179,4 +210,71 @@ fn print_help() {
     println!("  clear               - Clear all events");
     println!("  help                - Show this help message");
     println!("  exit                - Exit the application");
+}
+
+fn parse_add(input: &str) -> Option<Event> {
+    let command = input.strip_prefix("add ").unwrap_or("");
+    let parts: Vec<&str> = command.split_whitespace().collect();
+
+    let mut name: String = String::from("");
+    let mut time: Option<NaiveTime> = None;
+    let mut date: Option<NaiveDate> = None;
+
+    let mut is_name = false;
+    for part in parts {
+        if is_name {
+            name += part;
+            name += " ";
+        }
+        if let Some(_date) = is_valid_date(part) {
+            date = Some(_date);
+            is_name = true;
+        }
+        if let Some(_time) = is_valid_time(part) {
+            time = Some(_time);
+            is_name = true;
+        }
+    }
+
+    if date.is_none() || time.is_none() {
+        eprintln!("Error: Date and time must be provided.");
+        return None;
+    }
+    if is_name {
+        eprintln!("Error: Name not Defined");
+        return None;
+    }
+
+    name = name.trim().to_owned();
+
+    let event = Event {
+        name,
+        time: time.unwrap(),
+        date: date.unwrap(),
+        has_notified: false,
+        allarm_time: None,
+        description: None,
+        location: None,
+    };
+    Some(event)
+}
+
+fn is_valid_date(date_str: &str) -> Option<NaiveDate> {
+    let formats = ["%Y-%m-%d", "%d-%m-%Y", "%d.&m.&Y", "%m/%d/%Y"];
+    for format in &formats {
+        if let Ok(date) = NaiveDate::parse_from_str(date_str, format) {
+            return Some(date);
+        }
+    }
+    None
+}
+
+fn is_valid_time(time_str: &str) -> Option<NaiveTime> {
+    let formats = ["%H:%M:%S", "%H:%M", "%I:%M %p"];
+    for format in &formats {
+        if let Ok(time) = NaiveTime::parse_from_str(time_str, format) {
+            return Some(time);
+        }
+    }
+    None
 }

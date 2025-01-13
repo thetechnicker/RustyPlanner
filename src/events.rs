@@ -1,21 +1,23 @@
-use chrono::{Local, NaiveDate, NaiveDateTime, NaiveTime};
+use chrono::{Duration, Local, NaiveDate, NaiveDateTime, NaiveTime};
 use futures::channel::mpsc::{channel, Receiver};
 use futures::{SinkExt, StreamExt};
 use notify::{Config, RecommendedWatcher};
 use notify::{Event as NotifyEvent, RecursiveMode, Result, Watcher};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
+use std::{fs, isize, usize};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Event {
-    pub timedate: NaiveDateTime,
     pub name: String,
+    pub time: NaiveTime,
+    pub date: NaiveDate,
     pub has_notified: bool,
     pub description: Option<String>,
     pub location: Option<String>,
+    pub allarm_time: Option<Duration>,
 }
 
 pub enum EventManagerMode {
@@ -69,7 +71,7 @@ impl EventManager {
 
     pub fn save_events(&self) {
         if let EventManagerMode::Active = self.mode {
-            println!("saved Events");
+            // println!("saved Events");
             // Convert the vector of events to a JSON string
             let json_string =
                 serde_json::to_string(&self.events).expect("Failed to convert to JSON");
@@ -140,7 +142,7 @@ impl EventManager {
         }
     }
 
-    pub fn add_event_from_str(&mut self, add_str: &str) {
+    pub fn add_event_from_str(&mut self, add_str: &str) -> isize {
         if let EventManagerMode::Active = self.mode {
             // Define regex patterns for time and date
             let time_pattern = Regex::new(r"(?i)\b(1[0-2]|0?[1-9]):([0-5][0-9]) ?([AP]M)?|([01]?[0-9]|2[0-3])(:[0-5][0-9]){0,2}\b").unwrap();
@@ -174,18 +176,23 @@ impl EventManager {
 
             if let Some(datetime) = datetime_opt {
                 self.events.push(Event {
-                    timedate: datetime,
+                    time: datetime.time(),
+                    date: datetime.date(),
                     name,
                     has_notified: false,
                     description: None,
                     location: None,
+                    allarm_time: None,
                 });
                 if self.auto_save {
                     self.save_events();
                 }
+                return (self.events.len() - 1) as isize;
             }
+            return -1;
         } else {
             println!("Cannot add events in Passive mode.");
+            return -1;
         }
     }
 
@@ -198,6 +205,10 @@ impl EventManager {
         } else {
             println!("Cannot clear events in Passive mode.");
         }
+    }
+
+    pub fn get_event(&mut self, x: isize) -> Option<&Event> {
+        self.events.get(x as usize)
     }
 
     pub fn iter_events(&self) -> impl Iterator<Item = &Event> {
@@ -216,6 +227,23 @@ impl EventManager {
                 }
             });
         });
+    }
+
+    pub fn add_event(&mut self, event: Event) -> isize {
+        if let EventManagerMode::Active = self.mode {
+            self.events.push(event);
+            (self.events.len() - 1) as isize
+        } else {
+            return -1;
+        }
+    }
+
+    pub fn remove_event(&mut self, x: usize) -> Option<Event> {
+        if x < self.events.len() {
+            Some(self.events.remove(x))
+        } else {
+            None
+        }
     }
 }
 
