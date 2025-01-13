@@ -5,6 +5,7 @@ RustyPlanner is a command-line tool for managing your appointments and events, s
 ## Features
 
 - Add new events
+- Remove event by Index
 - List all events
 - Clear all events
 - Interactive and command-line modes
@@ -31,6 +32,7 @@ You can also use the application directly from the command line with the followi
 ### Available Commands
 
 - `add <event name> <time> [<date>]` - Add a new event
+- `remove <index>` - remove event
 - `list` - List all events
 - `clear` - Clear all events
 - `help` - Show this help message

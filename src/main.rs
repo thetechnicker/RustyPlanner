@@ -1,6 +1,6 @@
 mod events;
 
-use chrono::{Date, NaiveDate, NaiveTime};
+use chrono::{Date, NaiveDate, NaiveTime, Duration};
 use directories::BaseDirs;
 use events::Event;
 use events::{EventManager, EventManagerMode};
@@ -154,16 +154,24 @@ fn command_mode(event_manager: &Arc<Mutex<EventManager>>, commands: &[String]) {
 fn parse_commands(command: &str, event_manager: &Arc<Mutex<EventManager>>) {
     match command {
         _ if command.starts_with("add") => {
-            parse_add(command);
-            // let x = event_manager.lock().unwrap().add_event_from_str(command);
-            // match event_manager.lock().unwrap().get_event(x) {
-            //     Some(event) => {
-            //         println!("Event '{}' saved at index {}", event.name, x);
-            //     }
-            //     None => {
-            //         eprintln!("Error: Event not found at index {}", x);
-            //     }
-            // }
+            match parse_add(command) {
+                Some(event) => {
+                    //println!("Event: {:?}", event);
+                    let x = event_manager.lock().unwrap().add_event(event);
+                    match event_manager.lock().unwrap().get_event(x) {
+                        Some(event) => {
+                            println!("Event '{}' saved at index {}", event.name, x);
+                        }
+                        None => {
+                            eprintln!("Error: Event not found at index {}", x);
+                        }
+                    }
+
+                }
+                None => {
+                    eprintln!("error")
+                }
+            }
         }
         _ if command.starts_with("save") => {
             event_manager.lock().unwrap().save_events();
@@ -196,6 +204,9 @@ fn parse_commands(command: &str, event_manager: &Arc<Mutex<EventManager>>) {
         "help" => {
             print_help();
         }
+        "cls" => {
+            clear_screen();
+        }
         _ => {
             eprintln!("Unknown command: {}", command);
             print_help(); // Suggest help for valid commands
@@ -212,6 +223,13 @@ fn print_help() {
     println!("  exit                - Exit the application");
 }
 
+enum ParseMode {
+    Desc,
+    Loc,
+    AlarmTime,
+    None,
+}
+
 fn parse_add(input: &str) -> Option<Event> {
     let command = input.strip_prefix("add ").unwrap_or("");
     let parts: Vec<&str> = command.split_whitespace().collect();
@@ -219,25 +237,59 @@ fn parse_add(input: &str) -> Option<Event> {
     let mut name: String = String::from("");
     let mut time: Option<NaiveTime> = None;
     let mut date: Option<NaiveDate> = None;
+    let mut location: String = String::from("");
+    let mut description: String = String::from("");
+    let mut allarm_time: Option<Duration> = None;
 
-    let mut is_name = false;
+    let mut is_name = true;
+    let mut mode= ParseMode::None;
     for part in parts {
+        if date.is_none(){
+            if let Some(_date) = is_valid_date(part){
+                date = Some(_date);
+                is_name=false;
+                continue;
+            }
+        }
+        if time.is_none(){
+            if let Some(_time) = is_valid_time(part) {
+                time = Some(_time);
+                is_name=false;
+                continue;
+            }
+        }
         if is_name {
             name += part;
             name += " ";
-        }
-        if let Some(_date) = is_valid_date(part) {
-            date = Some(_date);
-            is_name = true;
-        }
-        if let Some(_time) = is_valid_time(part) {
-            time = Some(_time);
-            is_name = true;
+        } else {
+            match mode{
+                ParseMode::Desc =>{
+                    description += part;
+                    description += " ";
+                }
+                ParseMode::Loc =>{
+                    location += part;
+                    location += " ";
+                }
+                ParseMode::AlarmTime =>{
+                    if allarm_time.is_none(){
+                        allarm_time = Some(parse_duration(part).expect("Failed Parsing"));
+                        mode=ParseMode::None;
+                    }
+                }
+                ParseMode::None => {
+                    println!("idk where to put {}", part);
+                }
+            }
         }
     }
 
-    if date.is_none() || time.is_none() {
-        eprintln!("Error: Date and time must be provided.");
+    if date.is_none() {
+        eprintln!("Error: Date must be provided.");
+        return None;
+    }
+    if time.is_none() {
+        eprintln!("Error: Time must be provided.");
         return None;
     }
     if is_name {
@@ -252,15 +304,15 @@ fn parse_add(input: &str) -> Option<Event> {
         time: time.unwrap(),
         date: date.unwrap(),
         has_notified: false,
-        allarm_time: None,
-        description: None,
-        location: None,
+        allarm_time: allarm_time,
+        description: Some(description.trim().to_owned()),
+        location: Some(location.trim().to_owned()),
     };
     Some(event)
 }
 
 fn is_valid_date(date_str: &str) -> Option<NaiveDate> {
-    let formats = ["%Y-%m-%d", "%d-%m-%Y", "%d.&m.&Y", "%m/%d/%Y"];
+    let formats = ["%Y-%m-%d", "%d-%m-%Y", "%d.%m.%Y", "%m/%d/%Y"];
     for format in &formats {
         if let Ok(date) = NaiveDate::parse_from_str(date_str, format) {
             return Some(date);
@@ -277,4 +329,30 @@ fn is_valid_time(time_str: &str) -> Option<NaiveTime> {
         }
     }
     None
+}
+
+fn clear_screen() {
+    // ANSI escape code to clear the screen
+    print!("{}[2J", 27 as char);
+    // Move the cursor to the top left corner
+    print!("{}[H", 27 as char);
+    // Flush the output to ensure it is displayed
+    io::stdout().flush().unwrap();
+}
+
+fn parse_duration(s: &str) -> Result<Duration, String> {
+    let trimmed = s.trim();
+    
+    // Regular expression to match hours and minutes
+    let re = Regex::new(r"(?:(\d+)h)?(?:(\d+)m)?").map_err(|_| "Failed to compile regex".to_string())?;
+    
+    // Capture groups for hours and minutes
+    let caps = re.captures(trimmed).ok_or("Invalid format".to_string())?;
+    
+    // Parse hours and minutes
+    let hours = caps.get(1).and_then(|m| m.as_str().parse::<i64>().ok()).unwrap_or(0);
+    let minutes = caps.get(2).and_then(|m| m.as_str().parse::<i64>().ok()).unwrap_or(0);
+    
+    // Create a Duration from the parsed values
+    Ok(Duration::hours(hours) + Duration::minutes(minutes))
 }
