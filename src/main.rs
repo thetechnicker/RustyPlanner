@@ -1,12 +1,13 @@
 mod events;
 
-use events::EventManager;
-use std::io::{self, Write};
 use directories::BaseDirs;
-use std::fs;
-use std::path::PathBuf;
+use events::{EventManager, EventManagerMode};
 use std::env;
+use std::fs;
+use std::io::{self, Write};
+use std::path::PathBuf;
 use std::process::Command;
+use std::sync::{Arc, Mutex};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -23,22 +24,21 @@ fn main() {
         fs::create_dir_all(data_dir.clone()).expect("Failed to create data directory");
 
         data_file_path = Some(data_dir.join("dates.json"));
-
     } else {
         eprintln!("Could not find base directories.");
         data_file_path = None;
     }
 
-    let mut event_manager: EventManager;
+    let event_manager: Arc<Mutex<EventManager>>;
 
     if let Some(dfp) = &data_file_path {
-        event_manager = EventManager::new(dfp.clone(), true);
+        event_manager = EventManager::new(dfp.clone(), true, EventManagerMode::Active);
     } else {
         eprintln!("error cant create Config file");
         return;
     }
 
-    event_manager.read_events_from_file();
+    event_manager.lock().unwrap().read_events_from_file();
 
     if args.len() > 1 {
         if args[1] == "service" {
@@ -61,41 +61,64 @@ fn main() {
                 eprintln!("Service command required");
             }
         } else {
-            command_mode(&mut event_manager, &args[1..]);
+            command_mode(&event_manager, &args[1..]);
         }
     } else {
-        event_manager.list_events();
-        loop_mode(&mut event_manager);
+        event_manager.lock().unwrap().list_events();
+        loop_mode(&event_manager);
     }
 }
 
-fn service_start(){
-    let _child = Command::new("cargo")
-        .arg("run")
-        .arg("--bin")
-        .arg("background_service")
-        .arg(if cfg!(debug_assertions) { "" } else { "--release" })
-        .spawn()
-        .expect("Failed to start background service");
+fn service_start() {
+    // Check if the binary is built locally or installed globally/for user
+    #[cfg(debug_assertions)]
+    {
+        println!("Running local build");
+        let _child = Command::new("cargo")
+            .arg("run")
+            .arg("--bin")
+            .arg("RustyPlanner_background_service")
+            .spawn()
+            .expect("Failed to start background service");
+    }
+    #[cfg(not(debug_assertions))]
+    {
+        println!("Running installed version");
+        let _child = Command::new("RustyPlanner_background_service")
+            .spawn()
+            .expect("Failed to start background service");
+    }
 }
 
-fn service_stop(){
-    let build_type = if cfg!(debug_assertions) { "debug" } else { "release" };
-    let service_name = format!("target/{}/background_service", build_type);
-    let _output = Command::new("pkill")
-        .arg("-f")
-        .arg(service_name)
-        .output()
-        .expect("Failed to stop background service");
-    println!("Service stopped, output: {:?}", _output);
+fn service_stop() {
+    #[cfg(debug_assertions)]
+    {
+        let service_name = "target/debug/RustyPlanner_background_service";
+        let _output = Command::new("pkill")
+            .arg("-f")
+            .arg(service_name)
+            .output()
+            .expect("Failed to stop background service");
+        println!("Service stopped, output: {:?}", _output);
+    }
+    #[cfg(not(debug_assertions))]
+    {
+        let service_name = "RustyPlanner_background_service";
+        let _output = Command::new("pkill")
+            .arg("-f")
+            .arg(service_name)
+            .output()
+            .expect("Failed to stop background service");
+        println!("Service stopped, output: {:?}", _output);
+    }
 }
 
-fn service_restart(){
+fn service_restart() {
     service_stop();
     service_start();
 }
 
-fn loop_mode(event_manager: &mut EventManager){
+fn loop_mode(event_manager: &Arc<Mutex<EventManager>>) {
     loop {
         let mut input = String::new();
 
@@ -119,23 +142,25 @@ fn loop_mode(event_manager: &mut EventManager){
     }
 }
 
-
-fn command_mode(event_manager: &mut EventManager, commands: &[String]) {
+fn command_mode(event_manager: &Arc<Mutex<EventManager>>, commands: &[String]) {
     let command = commands.join(" ");
 
     parse_commands(&command, event_manager);
 }
 
-fn parse_commands(command: &str, event_manager: &mut EventManager) {
+fn parse_commands(command: &str, event_manager: &Arc<Mutex<EventManager>>) {
     match command {
         _ if command.starts_with("add") => {
-            event_manager.add_event_from_str(command);
+            event_manager.lock().unwrap().add_event_from_str(command);
+        }
+        _ if command.starts_with("save") => {
+            event_manager.lock().unwrap().save_events();
         }
         "list" => {
-            event_manager.list_events();
+            event_manager.lock().unwrap().list_events();
         }
         "clear" => {
-            event_manager.clear();
+            event_manager.lock().unwrap().clear();
         }
         "help" => {
             print_help();
@@ -155,4 +180,3 @@ fn print_help() {
     println!("  help                - Show this help message");
     println!("  exit                - Exit the application");
 }
-
