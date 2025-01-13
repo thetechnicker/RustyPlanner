@@ -93,7 +93,7 @@ fn service_start() {
 fn service_stop() {
     #[cfg(debug_assertions)]
     {
-        let service_name = "target/debug/background_service";
+        let service_name = "target/debug/RustyPlanner_background_service";
         let _output = Command::new("pkill")
             .arg("-f")
             .arg(service_name)
