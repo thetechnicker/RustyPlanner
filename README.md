@@ -40,11 +40,13 @@ You can also use the application directly from the command line with the followi
 
 RustyPlanner depends on the following crates:
 
-- `chrono` for date and time handling
-- `directories` for handling directories
-- `notify-rust` for desktop notifications
-- `regex` for regular expressions
-- `serde` and `serde_json` for JSON serialization and deserialization
+- `chrono`
+- `directories`
+- `notify-rust`
+- `regex`
+- `serde` and `serde_json`
+- `notify`
+- `futures`
 
 ## Installation
 
