@@ -54,10 +54,10 @@ impl EventManager {
 
         event_manager.lock().unwrap().read_events_from_file();
 
-        if let EventManagerMode::Passive = event_manager.lock().unwrap().mode {
+        //if let EventManagerMode::Passive = event_manager.lock().unwrap().mode {
             println!("Monitoring file: {:?}", file_path);
             EventManager::monitor_file(event_manager.clone(), file_path);
-        }
+        //}
 
         event_manager
     }
@@ -70,7 +70,7 @@ impl EventManager {
     }
 
     pub fn save_events(&self) {
-        if let EventManagerMode::Active = self.mode {
+        //if let EventManagerMode::Active = self.mode {
             // println!("saved Events");
             // Convert the vector of events to a JSON string
             let json_string =
@@ -83,9 +83,9 @@ impl EventManager {
             } else {
                 println!("Events saved successfully.");
             }
-        } else {
+        /*} else {
             println!("Cannot save events in Passive mode.");
-        }
+        }*/
     }
 
     pub fn read_events_from_file(&mut self) {
@@ -232,6 +232,9 @@ impl EventManager {
     pub fn add_event(&mut self, event: Event) -> isize {
         if let EventManagerMode::Active = self.mode {
             self.events.push(event);
+            if self.auto_save {
+                self.save_events();
+            }
             (self.events.len() - 1) as isize
         } else {
             return -1;
@@ -271,7 +274,7 @@ async fn async_watch(event_manager: Arc<Mutex<EventManager>>, path: PathBuf) -> 
         match res {
             Ok(event) => {
                 if event.kind.is_modify() {
-                    println!("changed: {:?}", event);
+                    //println!("changed: {:?}", event);
                     event_manager.lock().unwrap().read_events_from_file();
                 }
             }

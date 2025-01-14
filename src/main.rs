@@ -166,7 +166,7 @@ fn parse_commands(command: &str, event_manager: &Arc<Mutex<EventManager>>) {
                             eprintln!("Error: Event not found at index {}", x);
                         }
                     }
-                    event_manager.lock().unwrap().save_events();
+                    //event_manager.lock().unwrap().save_events();
                 }
                 None => {
                     eprintln!("error")
@@ -262,38 +262,43 @@ fn parse_add(input: &str) -> Option<Event> {
             name += part;
             name += " ";
         } else {
-            match mode{
-                ParseMode::Desc => {
-                    description += part;
-                    description += " ";
-                }
-                ParseMode::Loc => {
-                    location += part;
-                    location += " ";
-                }
-                ParseMode::AlarmTime => {
-                    if allarm_time.is_none(){
-                        allarm_time = Some(parse_duration(part).expect("Failed Parsing"));
-                    }
-                }
-                ParseMode::None => {
-                    //println!("idk where to put {}", part);
-                }
-            }
-            match part {
+             match part {
                 "-d" =>{
                     mode=ParseMode::Desc;
+                    continue;
                 }
                 "-l" =>{
                     mode=ParseMode::Loc;
+                    continue;
                 }
                 "-a" =>{
                     mode=ParseMode::AlarmTime;
+                    continue;
                 }
                 _ =>{
-                    mode=ParseMode::None;
+                    //mode=ParseMode::None;
                 }
             }
+
+             match mode{
+                 ParseMode::Desc => {
+                     description += part;
+                     description += " ";
+                 }
+                 ParseMode::Loc => {
+                     location += part;
+                     location += " ";
+                 }
+                 ParseMode::AlarmTime => {
+                     if allarm_time.is_none(){
+                         allarm_time = Some(parse_duration(part).expect("Failed Parsing"));
+                     }
+                 }
+                 ParseMode::None => {
+                     //println!("idk where to put {}", part);
+
+                 }
+             }
         }
     }
 
@@ -355,19 +360,20 @@ fn clear_screen() {
 
 fn parse_duration(s: &str) -> Result<Duration, String> {
     let trimmed = s.trim();
-    
+    println!("{}", trimmed);
+
     // Regular expression to match hours and minutes
     let re = Regex::new(r"(?:(\d+)h)?(?:(\d+)m)?").map_err(|_| "Failed to compile regex".to_string())?;
-    
+
     // Capture groups for hours and minutes
     let caps = re.captures(trimmed).ok_or("Invalid format".to_string())?;
 
-        println!("Captured groups: {:?}", caps);
-    
+    println!("Captured groups: {:?}", caps);
+
     // Parse hours and minutes
     let hours = caps.get(1).and_then(|m| m.as_str().parse::<i64>().ok()).unwrap_or(0);
     let minutes = caps.get(2).and_then(|m| m.as_str().parse::<i64>().ok()).unwrap_or(0);
-    
+
     // Create a Duration from the parsed values
     Ok(Duration::hours(hours) + Duration::minutes(minutes))
 }
