@@ -20,6 +20,7 @@ pub struct Event {
     pub allarm_time: Option<Duration>,
 }
 
+#[derive(PartialEq, Eq)]
 pub enum EventManagerMode {
     Active,  // manages events, has read/write access
     Passive, // handles notification, read only
@@ -38,7 +39,7 @@ impl EventManager {
         auto_save: bool,
         mode: EventManagerMode,
     ) -> Arc<Mutex<EventManager>> {
-        if let EventManagerMode::Passive = mode {
+        if EventManagerMode::Passive == mode {
             if !file_path.exists() {
                 eprintln!("Error: File to monitor does not exist: {:?}", file_path);
                 std::process::exit(1);
@@ -55,8 +56,8 @@ impl EventManager {
         event_manager.lock().unwrap().read_events_from_file();
 
         //if let EventManagerMode::Passive = event_manager.lock().unwrap().mode {
-            println!("Monitoring file: {:?}", file_path);
-            EventManager::monitor_file(event_manager.clone(), file_path);
+        println!("Monitoring file: {:?}", file_path);
+        EventManager::monitor_file(event_manager.clone(), file_path);
         //}
 
         event_manager
@@ -71,18 +72,17 @@ impl EventManager {
 
     pub fn save_events(&self) {
         //if let EventManagerMode::Active = self.mode {
-            // println!("saved Events");
-            // Convert the vector of events to a JSON string
-            let json_string =
-                serde_json::to_string(&self.events).expect("Failed to convert to JSON");
+        // println!("saved Events");
+        // Convert the vector of events to a JSON string
+        let json_string = serde_json::to_string(&self.events).expect("Failed to convert to JSON");
 
-            // Print the JSON string
-            // println!("{}", json_string);
-            if let Err(e) = fs::write(&self.file_path, json_string) {
-                eprintln!("Failed to save file: {}", e);
-            } else {
-                println!("Events saved successfully.");
-            }
+        // Print the JSON string
+        // println!("{}", json_string);
+        if let Err(e) = fs::write(&self.file_path, json_string) {
+            eprintln!("Failed to save file: {}", e);
+        } else {
+            println!("Events saved successfully.");
+        }
         /*} else {
             println!("Cannot save events in Passive mode.");
         }*/
@@ -143,7 +143,7 @@ impl EventManager {
     }
 
     pub fn add_event_from_str(&mut self, add_str: &str) -> isize {
-        if let EventManagerMode::Active = self.mode {
+        if EventManagerMode::Active == self.mode {
             // Define regex patterns for time and date
             let time_pattern = Regex::new(r"(?i)\b(1[0-2]|0?[1-9]):([0-5][0-9]) ?([AP]M)?|([01]?[0-9]|2[0-3])(:[0-5][0-9]){0,2}\b").unwrap();
             let date_pattern = Regex::new(r"(?i)\b(\d{2}\.\d{2}(\.\d{4})?|\d{2}/\d{2}/\d{4}|\d{4}-\d{2}-\d{2}|[A-Za-z]+ \d{1,2}, \d{4})\b").unwrap();
@@ -197,7 +197,7 @@ impl EventManager {
     }
 
     pub fn clear(&mut self) {
-        if let EventManagerMode::Active = self.mode {
+        if EventManagerMode::Active == self.mode {
             self.events.clear();
             if self.auto_save {
                 self.save_events();
@@ -230,7 +230,7 @@ impl EventManager {
     }
 
     pub fn add_event(&mut self, event: Event) -> isize {
-        if let EventManagerMode::Active = self.mode {
+        if EventManagerMode::Active == self.mode {
             self.events.push(event);
             if self.auto_save {
                 self.save_events();
