@@ -9,7 +9,7 @@ use std::env;
 use std::fs;
 use std::io::{self, Write};
 use std::path::PathBuf;
-use std::process::Command;
+use std::process::{Command, Stdio};
 use std::sync::{Arc, Mutex};
 
 fn main() {
@@ -81,6 +81,8 @@ fn service_start() {
             .arg("run")
             .arg("--bin")
             .arg("RustyPlanner_background_service")
+            //.stdout(Stdio::null()) // Redirect standard output to null
+            //.stderr(Stdio::null()) // Redirect standard error to null
             .spawn()
             .expect("Failed to start background service");
     }
@@ -88,6 +90,8 @@ fn service_start() {
     {
         println!("Running installed version");
         let _child = Command::new("RustyPlanner_background_service")
+            .stdout(Stdio::null()) // Redirect standard output to null
+            .stderr(Stdio::null()) // Redirect standard error to null
             .spawn()
             .expect("Failed to start background service");
     }
@@ -262,7 +266,7 @@ fn parse_add(input: &str) -> Option<Event> {
             name += part;
             name += " ";
         } else {
-             match part {
+            match part {
                 "-d" =>{
                     mode=ParseMode::Desc;
                     continue;
@@ -280,25 +284,25 @@ fn parse_add(input: &str) -> Option<Event> {
                 }
             }
 
-             match mode{
-                 ParseMode::Desc => {
-                     description += part;
-                     description += " ";
-                 }
-                 ParseMode::Loc => {
-                     location += part;
-                     location += " ";
-                 }
-                 ParseMode::AlarmTime => {
-                     if allarm_time.is_none(){
-                         allarm_time = Some(parse_duration(part).expect("Failed Parsing"));
-                     }
-                 }
-                 ParseMode::None => {
-                     //println!("idk where to put {}", part);
+            match mode{
+                ParseMode::Desc => {
+                    description += part;
+                    description += " ";
+                }
+                ParseMode::Loc => {
+                    location += part;
+                    location += " ";
+                }
+                ParseMode::AlarmTime => {
+                    if allarm_time.is_none(){
+                        allarm_time = Some(parse_duration(part).expect("Failed Parsing"));
+                    }
+                }
+                ParseMode::None => {
+                    //println!("idk where to put {}", part);
 
-                 }
-             }
+                }
+            }
         }
     }
 
