@@ -1,6 +1,6 @@
 mod events;
 
-use chrono::{Date, Duration, NaiveDate, NaiveTime};
+use chrono::{Duration, NaiveDate, NaiveTime};
 use directories::BaseDirs;
 use events::Event;
 use events::{EventManager, EventManagerMode};
@@ -9,7 +9,7 @@ use std::env;
 use std::fs;
 use std::io::{self, Write};
 use std::path::PathBuf;
-use std::process::{Command, Stdio};
+use std::process::Command;
 use std::sync::{Arc, Mutex};
 
 fn main() {

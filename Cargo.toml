@@ -2,14 +2,19 @@
 name = "RustyPlanner"
 version = "0.1.0"
 edition = "2021"
-default-run = "RustyPlanner"
+default-run = "RustyPlanner_main"
 readme = "README.md"
 license = "MIT"
 description = "A command-line tool for managing your appointments and events."
 
 [[bin]]
-name = "RustyPlanner_background_service"
+name = "RustyPlanner_main"
+path = "src/main.rs"
+
+[[bin]]
+name = "RustyPlanner_daemon"
 path = "src/background_service.rs"
+
 
 [dependencies]
 chrono = { version = "0.4.39", features = ["serde"] }

@@ -1,11 +1,10 @@
-use chrono::{Duration, Local, NaiveDate, NaiveDateTime, NaiveTime};
+use chrono::{Duration, NaiveDate, NaiveTime};
 use futures::channel::mpsc::{channel, Receiver};
 use futures::{SinkExt, StreamExt};
 use notify::{Config, RecommendedWatcher};
-use notify::{Event as NotifyEvent, RecursiveMode, Result, Watcher};
-use regex::Regex;
+use notify::{Event as NotifyEvent, RecursiveMode, Watcher};
 use serde::{Deserialize, Serialize};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::{fs, isize, usize};
 
@@ -22,14 +21,17 @@ pub struct Event {
 
 #[derive(PartialEq, Eq)]
 pub enum EventManagerMode {
-    Active,  // manages events, has read/write access
+    #[allow(dead_code)]
+    Active, // manages events, has read/write access
     Passive, // handles notification, read only
 }
 
 pub struct EventManager {
     file_path: PathBuf,
+    #[allow(dead_code)]
     auto_save: bool,
     events: Vec<Event>,
+    #[allow(dead_code)]
     mode: EventManagerMode,
 }
 
@@ -63,6 +65,7 @@ impl EventManager {
         event_manager
     }
 
+    #[allow(dead_code)]
     pub fn list_events(&self) {
         println!("Events:");
         for (index, event) in self.events.iter().enumerate() {
@@ -100,102 +103,7 @@ impl EventManager {
         }
     }
 
-    fn parse_datetime(&self, date_str: &str, time_str: &str) -> Option<NaiveDateTime> {
-        // Get today's date if date_str is empty
-        let date = if date_str.is_empty() {
-            Some(Local::now().naive_utc().date()) // Get today's date in UTC
-        } else {
-            if date_str.contains('/') {
-                NaiveDate::parse_from_str(date_str, "%d/%m/%Y")
-                    .ok()
-                    .or_else(|| NaiveDate::parse_from_str(date_str, "%d/%m").ok())
-            } else if date_str.contains('-') {
-                NaiveDate::parse_from_str(date_str, "%d-%m-%Y")
-                    .ok()
-                    .or_else(|| NaiveDate::parse_from_str(date_str, "%d-%m").ok())
-            } else if date_str.contains('.') {
-                NaiveDate::parse_from_str(date_str, "%d.%m.%Y")
-                    .ok()
-                    .or_else(|| NaiveDate::parse_from_str(date_str, "%d.%m").ok())
-            } else {
-                unreachable!("This should not be valid {}", date_str)
-            }
-        };
-
-        // Parse the time
-        let time = if time_str.contains(':') {
-            if time_str.to_lowercase().contains("am") || time_str.to_lowercase().contains("pm") {
-                NaiveTime::parse_from_str(time_str, "%I:%M %p").ok()
-            } else {
-                NaiveTime::parse_from_str(time_str, "%H:%M")
-                    .ok()
-                    .or_else(|| NaiveTime::parse_from_str(time_str, "%H:%M:%S").ok())
-            }
-        } else {
-            None
-        };
-
-        // Combine date and time
-        match (date, time) {
-            (Some(d), Some(t)) => Some(NaiveDateTime::new(d, t)),
-            _ => None,
-        }
-    }
-
-    pub fn add_event_from_str(&mut self, add_str: &str) -> isize {
-        if EventManagerMode::Active == self.mode {
-            // Define regex patterns for time and date
-            let time_pattern = Regex::new(r"(?i)\b(1[0-2]|0?[1-9]):([0-5][0-9]) ?([AP]M)?|([01]?[0-9]|2[0-3])(:[0-5][0-9]){0,2}\b").unwrap();
-            let date_pattern = Regex::new(r"(?i)\b(\d{2}\.\d{2}(\.\d{4})?|\d{2}/\d{2}/\d{4}|\d{4}-\d{2}-\d{2}|[A-Za-z]+ \d{1,2}, \d{4})\b").unwrap();
-
-            // Extract the part after "add "
-            let entry = add_str.strip_prefix("add ").unwrap_or(add_str);
-
-            // Extract time
-            let time_match = time_pattern.find(entry);
-            let time_str = time_match.map(|m| m.as_str());
-
-            // Extract date
-            let date_match = date_pattern.find(entry);
-            let date_str = date_match.map(|m| m.as_str());
-
-            // Extract name
-            let mut name = entry.to_string();
-            let mut time = String::new();
-            let mut date = String::new();
-            if let Some(_time) = time_str {
-                time = _time.trim().to_string();
-                name = name.replace(_time, "").trim().to_string();
-            }
-            if let Some(_date) = date_str {
-                date = _date.trim().to_string();
-                name = name.replace(_date, "").trim().to_string();
-            }
-
-            let datetime_opt = self.parse_datetime(&date, &time);
-
-            if let Some(datetime) = datetime_opt {
-                self.events.push(Event {
-                    time: datetime.time(),
-                    date: datetime.date(),
-                    name,
-                    has_notified: false,
-                    description: None,
-                    location: None,
-                    allarm_time: None,
-                });
-                if self.auto_save {
-                    self.save_events();
-                }
-                return (self.events.len() - 1) as isize;
-            }
-            return -1;
-        } else {
-            println!("Cannot add events in Passive mode.");
-            return -1;
-        }
-    }
-
+    #[allow(dead_code)]
     pub fn clear(&mut self) {
         if EventManagerMode::Active == self.mode {
             self.events.clear();
@@ -207,14 +115,17 @@ impl EventManager {
         }
     }
 
+    #[allow(dead_code)]
     pub fn get_event(&mut self, x: isize) -> Option<&Event> {
         self.events.get(x as usize)
     }
 
+    #[allow(dead_code)]
     pub fn iter_events(&self) -> impl Iterator<Item = &Event> {
         self.events.iter()
     }
 
+    #[allow(dead_code)]
     pub fn iter_events_mut(&mut self) -> impl Iterator<Item = &mut Event> {
         self.events.iter_mut()
     }
@@ -229,6 +140,7 @@ impl EventManager {
         });
     }
 
+    #[allow(dead_code)]
     pub fn add_event(&mut self, event: Event) -> isize {
         if EventManagerMode::Active == self.mode {
             self.events.push(event);
@@ -241,6 +153,7 @@ impl EventManager {
         }
     }
 
+    #[allow(dead_code)]
     pub fn remove_event(&mut self, x: usize) -> Option<Event> {
         if x < self.events.len() {
             Some(self.events.remove(x))
