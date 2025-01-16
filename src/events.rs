@@ -8,7 +8,7 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::{fs, isize, usize};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Event {
     pub name: String,
     pub time: NaiveTime,
@@ -196,4 +196,104 @@ async fn async_watch(event_manager: Arc<Mutex<EventManager>>, path: PathBuf) -> 
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_event_manager() {
+        use super::*;
+        use std::env;
+        use std::fs::File;
+        use std::io::Write;
+
+        let temp_dir = env::temp_dir();
+        let file_path = temp_dir.join("test.json");
+
+        let mut file = File::create(&file_path).expect("Failed to create file");
+        file.write_all(b"[]").expect("Failed to write to file");
+
+        let event_manager = EventManager::new(file_path.clone(), false, EventManagerMode::Active);
+
+        let event = Event {
+            name: String::from("Test Event"),
+            time: chrono::NaiveTime::from_hms_opt(12, 0, 0).unwrap(),
+            date: chrono::NaiveDate::from_ymd_opt(2021, 1, 1).unwrap(),
+            has_notified: false,
+            description: Some(String::from("Test Description")),
+            location: Some(String::from("Test Location")),
+            allarm_time: Some(chrono::Duration::minutes(10)),
+        };
+
+        let index = event_manager.lock().unwrap().add_event(event);
+
+        assert_eq!(
+            event_manager
+                .lock()
+                .unwrap()
+                .get_event(index as isize)
+                .unwrap()
+                .name,
+            "Test Event"
+        );
+
+        let mut event = event_manager
+            .lock()
+            .unwrap()
+            .remove_event(index as usize)
+            .unwrap();
+
+        assert_eq!(event.name, "Test Event");
+
+        event.name = String::from("New Test Event");
+
+        event_manager.lock().unwrap().add_event(event);
+
+        assert_eq!(
+            event_manager
+                .lock()
+                .unwrap()
+                .get_event(index as isize)
+                .unwrap()
+                .name,
+            "New Test Event"
+        );
+
+        event_manager.lock().unwrap().clear();
+
+        assert_eq!(
+            event_manager.lock().unwrap().get_event(index as isize),
+            None
+        );
+
+        let _ = std::fs::remove_file(&file_path);
+    }
+
+    #[test]
+    fn test_event() {
+        use super::*;
+        let event = Event {
+            name: "Test Event".to_string(),
+            time: chrono::NaiveTime::from_hms_opt(12, 0, 0).unwrap(),
+            date: chrono::NaiveDate::from_ymd_opt(2021, 1, 1).unwrap(),
+            has_notified: false,
+            description: Some("Test Description".to_string()),
+            location: Some("Test Location".to_string()),
+            allarm_time: Some(chrono::Duration::minutes(10)),
+        };
+
+        assert_eq!(event.name, "Test Event");
+        assert_eq!(
+            event.time,
+            chrono::NaiveTime::from_hms_opt(12, 0, 0).unwrap()
+        );
+        assert_eq!(
+            event.date,
+            chrono::NaiveDate::from_ymd_opt(2021, 1, 1).unwrap()
+        );
+        assert_eq!(event.has_notified, false);
+        assert_eq!(event.description, Some("Test Description".to_string()));
+        assert_eq!(event.location, Some("Test Location".to_string()));
+        assert_eq!(event.allarm_time, Some(chrono::Duration::minutes(10)));
+    }
 }
