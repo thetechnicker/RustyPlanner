@@ -80,7 +80,7 @@ fn service_start() {
         let _child = Command::new("cargo")
             .arg("run")
             .arg("--bin")
-            .arg("RustyPlanner_background_service")
+            .arg("RustyPlanner_daemon")
             //.stdout(Stdio::null()) // Redirect standard output to null
             //.stderr(Stdio::null()) // Redirect standard error to null
             .spawn()
@@ -89,9 +89,9 @@ fn service_start() {
     #[cfg(not(debug_assertions))]
     {
         println!("Running installed version");
-        let _child = Command::new("RustyPlanner_background_service")
-            .stdout(Stdio::null()) // Redirect standard output to null
-            .stderr(Stdio::null()) // Redirect standard error to null
+        let _child = Command::new("RustyPlanner_daemon")
+            // .stdout(Stdio::null()) // Redirect standard output to null
+            // .stderr(Stdio::null()) // Redirect standard error to null
             .spawn()
             .expect("Failed to start background service");
     }
