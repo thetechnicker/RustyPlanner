@@ -49,6 +49,8 @@ RustyPlanner depends on the following crates:
 - `serde` and `serde_json`
 - `notify`
 - `futures`
+- `daemonize`
+- `users`
 
 ## Installation
 
