@@ -15,7 +15,7 @@ fn is_wsl() -> bool {
     #[cfg(target_os = "linux")]
     {
         if let Ok(contents) = std::fs::read_to_string("/proc/version") {
-            println!("Contents: {}", contents);
+            //println!("Contents: {}", contents);
             return contents.contains("WSL");
         }
     }
