@@ -4,14 +4,42 @@ mod notification;
 use directories::BaseDirs;
 use events::{EventManager, EventManagerMode};
 // use notify_rust::Notification;
+use daemonize::Daemonize;
 use notification::send_notification;
 use std::fs;
+use std::fs::File;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
+use users::{get_current_gid, get_current_uid};
 
 fn main() {
+    let stdout = File::create("/tmp/RustyPlannerDaemon.out").unwrap();
+    let stderr = File::create("/tmp/RustyPlannerDaemon.err").unwrap();
+
+    let user = get_current_uid();
+    let group = get_current_gid();
+
+    let daemonize = Daemonize::new()
+        .pid_file("/tmp/RustyPlannerDaemon.pid") // Every method except `new` and `start`
+        .chown_pid_file(true)
+        .working_directory("/tmp") // for default behaviour.
+        .user(user) // Group name
+        .group(group) // Group name
+        .stdout(stdout)
+        .stderr(stderr)
+        .privileged_action(|| "Executed before drop privileges");
+
+    match daemonize.start() {
+        Ok(_) => println!("Success, daemonized"),
+        Err(e) => eprintln!("Error, {}", e),
+    }
+
+    main_loop();
+}
+
+fn main_loop() {
     let data_file_path: Option<PathBuf>;
 
     if let Some(base_dirs) = BaseDirs::new() {
@@ -67,7 +95,7 @@ fn main() {
                 );
                 send_notification(&event.name, &message);
                 event.has_notified = true;
-                has_to_save=true;
+                has_to_save = true;
             }
         }
         if has_to_save {

@@ -1,6 +1,6 @@
 mod events;
 
-use chrono::{Date, NaiveDate, NaiveTime, Duration};
+use chrono::{Date, Duration, NaiveDate, NaiveTime};
 use directories::BaseDirs;
 use events::Event;
 use events::{EventManager, EventManagerMode};
@@ -98,26 +98,12 @@ fn service_start() {
 }
 
 fn service_stop() {
-    #[cfg(debug_assertions)]
-    {
-        let service_name = "target/debug/RustyPlanner_background_service";
-        let _output = Command::new("pkill")
-            .arg("-f")
-            .arg(service_name)
-            .output()
-            .expect("Failed to stop background service");
-        println!("Service stopped, output: {:?}", _output);
-    }
-    #[cfg(not(debug_assertions))]
-    {
-        let service_name = "RustyPlanner_background_service";
-        let _output = Command::new("pkill")
-            .arg("-f")
-            .arg(service_name)
-            .output()
-            .expect("Failed to stop background service");
-        println!("Service stopped, output: {:?}", _output);
-    }
+    let pid = fs::read_to_string("/tmp/RustyPlannerDaemon.pid").expect("Failed to read PID file");
+    let _output = Command::new("kill")
+        .arg(pid.trim())
+        .output()
+        .expect("Failed to stop background service");
+    println!("Service stopped, output: {:?}", _output);
 }
 
 fn service_restart() {
@@ -246,19 +232,19 @@ fn parse_add(input: &str) -> Option<Event> {
     let mut allarm_time: Option<Duration> = None;
 
     let mut is_name = true;
-    let mut mode= ParseMode::None;
+    let mut mode = ParseMode::None;
     for part in parts {
-        if date.is_none(){
-            if let Some(_date) = is_valid_date(part){
+        if date.is_none() {
+            if let Some(_date) = is_valid_date(part) {
                 date = Some(_date);
-                is_name=false;
+                is_name = false;
                 continue;
             }
         }
-        if time.is_none(){
+        if time.is_none() {
             if let Some(_time) = is_valid_time(part) {
                 time = Some(_time);
-                is_name=false;
+                is_name = false;
                 continue;
             }
         }
@@ -267,24 +253,24 @@ fn parse_add(input: &str) -> Option<Event> {
             name += " ";
         } else {
             match part {
-                "-d" =>{
-                    mode=ParseMode::Desc;
+                "-d" => {
+                    mode = ParseMode::Desc;
                     continue;
                 }
-                "-l" =>{
-                    mode=ParseMode::Loc;
+                "-l" => {
+                    mode = ParseMode::Loc;
                     continue;
                 }
-                "-a" =>{
-                    mode=ParseMode::AlarmTime;
+                "-a" => {
+                    mode = ParseMode::AlarmTime;
                     continue;
                 }
-                _ =>{
+                _ => {
                     //mode=ParseMode::None;
                 }
             }
 
-            match mode{
+            match mode {
                 ParseMode::Desc => {
                     description += part;
                     description += " ";
@@ -294,13 +280,12 @@ fn parse_add(input: &str) -> Option<Event> {
                     location += " ";
                 }
                 ParseMode::AlarmTime => {
-                    if allarm_time.is_none(){
+                    if allarm_time.is_none() {
                         allarm_time = Some(parse_duration(part).expect("Failed Parsing"));
                     }
                 }
                 ParseMode::None => {
                     //println!("idk where to put {}", part);
-
                 }
             }
         }
@@ -367,7 +352,8 @@ fn parse_duration(s: &str) -> Result<Duration, String> {
     println!("{}", trimmed);
 
     // Regular expression to match hours and minutes
-    let re = Regex::new(r"(?:(\d+)h)?(?:(\d+)m)?").map_err(|_| "Failed to compile regex".to_string())?;
+    let re =
+        Regex::new(r"(?:(\d+)h)?(?:(\d+)m)?").map_err(|_| "Failed to compile regex".to_string())?;
 
     // Capture groups for hours and minutes
     let caps = re.captures(trimmed).ok_or("Invalid format".to_string())?;
@@ -375,8 +361,14 @@ fn parse_duration(s: &str) -> Result<Duration, String> {
     println!("Captured groups: {:?}", caps);
 
     // Parse hours and minutes
-    let hours = caps.get(1).and_then(|m| m.as_str().parse::<i64>().ok()).unwrap_or(0);
-    let minutes = caps.get(2).and_then(|m| m.as_str().parse::<i64>().ok()).unwrap_or(0);
+    let hours = caps
+        .get(1)
+        .and_then(|m| m.as_str().parse::<i64>().ok())
+        .unwrap_or(0);
+    let minutes = caps
+        .get(2)
+        .and_then(|m| m.as_str().parse::<i64>().ok())
+        .unwrap_or(0);
 
     // Create a Duration from the parsed values
     Ok(Duration::hours(hours) + Duration::minutes(minutes))
