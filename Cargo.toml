@@ -2,10 +2,14 @@
 name = "RustyPlanner"
 version = "0.1.0"
 edition = "2021"
-default-run = "RustyPlanner_main"
 readme = "README.md"
 license = "MIT"
 description = "A command-line tool for managing your appointments and events."
+#default-run = "RustyPlanner_main"
+
+#[[lib]]
+#name = "foo"
+#path = "src/lib.rs"
 
 [[bin]]
 name = "RustyPlanner_main"

@@ -200,6 +200,9 @@ async fn async_watch(event_manager: Arc<Mutex<EventManager>>, path: PathBuf) -> 
 
 #[cfg(test)]
 mod tests {
+    use core::time;
+    use std::thread::{self};
+
     #[test]
     fn test_event_manager() {
         use super::*;
@@ -267,6 +270,88 @@ mod tests {
         );
 
         let _ = std::fs::remove_file(&file_path);
+    }
+
+    #[test]
+    fn test_auto_save() {
+        use super::*;
+        use std::env;
+        use std::fs::File;
+        use std::io::Write;
+
+        let temp_dir = env::temp_dir();
+        let file_path = temp_dir.join("test.json");
+
+        let mut file = File::create(&file_path).expect("Failed to create file");
+        file.write_all(b"[]").expect("Failed to write to file");
+
+        let event_manager = EventManager::new(file_path.clone(), true, EventManagerMode::Active);
+
+        let event = Event {
+            name: String::from("Test Event"),
+            time: chrono::NaiveTime::from_hms_opt(12, 0, 0).unwrap(),
+            date: chrono::NaiveDate::from_ymd_opt(2021, 1, 1).unwrap(),
+            has_notified: false,
+            description: Some(String::from("Test Description")),
+            location: Some(String::from("Test Location")),
+            allarm_time: Some(chrono::Duration::minutes(10)),
+        };
+
+        let index = event_manager.lock().unwrap().add_event(event);
+
+        assert!(file_path.exists());
+
+        let event_manager = EventManager::new(file_path.clone(), false, EventManagerMode::Active);
+
+        let event = event_manager
+            .lock()
+            .unwrap()
+            .remove_event(index as usize)
+            .unwrap();
+
+        assert_eq!(event.name, "Test Event");
+
+        let _ = std::fs::remove_file(&file_path);
+    }
+
+    #[test]
+    fn test_event_manager_passiv() {
+        use super::*;
+        use std::env;
+        use std::fs::File;
+
+        let temp_dir = env::temp_dir();
+        let file_path = temp_dir.join("test.json");
+
+        let _file = File::create(&file_path).expect("Failed to create file");
+
+        let event_manager_passiv =
+            EventManager::new(file_path.clone(), false, EventManagerMode::Passive);
+        let event_manager_active =
+            EventManager::new(file_path.clone(), true, EventManagerMode::Active);
+
+        let time_now = chrono::Local::now().time();
+        let date_now = chrono::Local::now().date_naive();
+
+        let event = Event {
+            name: "Test Event".to_string(),
+            time: time_now + chrono::Duration::minutes(1),
+            date: date_now,
+            has_notified: false,
+            allarm_time: None,
+            description: None,
+            location: None,
+        };
+
+        let index = event_manager_active.lock().unwrap().add_event(event);
+
+        thread::sleep(time::Duration::from_secs(10));
+
+        assert!(event_manager_passiv
+            .lock()
+            .unwrap()
+            .get_event(index as isize)
+            .is_some());
     }
 
     #[test]

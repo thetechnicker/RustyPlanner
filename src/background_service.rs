@@ -1,18 +1,17 @@
 mod events;
 mod notification;
+mod utils;
 
-use directories::BaseDirs;
 use events::{EventManager, EventManagerMode};
 // use notify_rust::Notification;
 use daemonize::Daemonize;
 use notification::send_notification;
-use std::fs;
 use std::fs::File;
-use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 use users::{get_current_gid, get_current_uid};
+use utils::get_path;
 
 fn main() {
     let stdout = File::create("/tmp/RustyPlannerDaemon.out").unwrap();
@@ -39,23 +38,8 @@ fn main() {
     main_loop();
 }
 
-fn main_loop() {
-    let data_file_path: Option<PathBuf>;
-
-    if let Some(base_dirs) = BaseDirs::new() {
-        let data_base_dir = base_dirs.data_dir();
-
-        println!("Data Directory: {:?}", data_base_dir);
-
-        let data_dir = data_base_dir.join("RustyPlanner");
-
-        fs::create_dir_all(data_dir.clone()).expect("Failed to create data directory");
-
-        data_file_path = Some(data_dir.join("dates.json"));
-    } else {
-        eprintln!("Could not find base directories.");
-        data_file_path = None;
-    }
+pub fn main_loop() {
+    let data_file_path = get_path();
 
     let event_manager: Arc<Mutex<EventManager>>;
 
