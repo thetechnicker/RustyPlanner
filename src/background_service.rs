@@ -31,11 +31,12 @@ fn main() {
         .privileged_action(|| "Executed before drop privileges");
 
     match daemonize.start() {
-        Ok(_) => println!("Success, daemonized"),
+        Ok(_) => {
+            println!("Success, daemonized");
+            main_loop();
+        }
         Err(e) => eprintln!("Error, {}", e),
     }
-
-    main_loop();
 }
 
 pub fn main_loop() {

@@ -1,4 +1,6 @@
+#[cfg(not(test))]
 use directories::BaseDirs;
+#[cfg(not(test))]
 use std::fs;
 use std::path::PathBuf;
 
