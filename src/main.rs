@@ -148,9 +148,14 @@ fn parse_commands(command: &str, event_manager: &Arc<Mutex<EventManager>>) {
                 Some(event) => {
                     //println!("Event: {:?}", event);
                     let x = event_manager.lock().unwrap().add_event(event);
-                    match event_manager.lock().unwrap().get_event(x) {
+                    match event_manager.lock().unwrap().get_event(x as usize) {
                         Some(event) => {
                             println!("Event '{}' saved at index {}", event.name, x);
+                            let new_event = edit_event(event);
+                            event_manager
+                                .lock()
+                                .unwrap()
+                                .replace_event(x as usize, new_event);
                         }
                         None => {
                             eprintln!("Error: Event not found at index {}", x);
@@ -185,6 +190,38 @@ fn parse_commands(command: &str, event_manager: &Arc<Mutex<EventManager>>) {
                 }
             }
         }
+        _ if command.starts_with("edit") => {
+            let x: &str = command.strip_prefix("edit ").unwrap_or("");
+            match x.trim().parse::<usize>() {
+                Ok(index) => {
+                    let event = event_manager
+                        .lock()
+                        .unwrap()
+                        .get_event(index)
+                        .expect("Error")
+                        // .clone();
+                        .to_owned();
+                    println!("Event '{}' edited at index {}", event.name, index);
+                    event_manager
+                        .lock()
+                        .unwrap()
+                        .replace_event(index, edit_event(&event));
+
+                    println!(
+                        "Event '{:?}' edited at index {}",
+                        event_manager
+                            .lock()
+                            .unwrap()
+                            .get_event(index)
+                            .expect("error"),
+                        index
+                    );
+                }
+                Err(_) => {
+                    eprintln!("Invalid index: {}", x);
+                }
+            }
+        }
         "list" => {
             event_manager.lock().unwrap().list_events();
         }
@@ -201,6 +238,48 @@ fn parse_commands(command: &str, event_manager: &Arc<Mutex<EventManager>>) {
             eprintln!("Unknown command: {}", command);
             print_help(); // Suggest help for valid commands
         }
+    }
+}
+
+fn edit_event(event: &Event) -> Event {
+    // Ask the user for the new name
+    let new_name = ask_user("Enter the new name", &event.name);
+    let new_time = ask_user("Enter the new time", &event.time.to_string());
+    let new_date = ask_user("Enter the new date", &event.date.to_string());
+    let new_description = ask_user(
+        "Enter the new description",
+        &event.description.as_ref().unwrap_or(&"".to_string()),
+    );
+    let new_location = ask_user(
+        "Enter the new location",
+        &event.location.as_ref().unwrap_or(&"".to_string()),
+    );
+
+    Event {
+        name: new_name,
+        time: is_valid_time(&new_time).unwrap_or(event.time),
+        date: is_valid_date(&new_date).unwrap_or(event.date),
+        has_notified: false,
+        allarm_time: event.allarm_time,
+        description: Some(new_description),
+        location: Some(new_location),
+    }
+}
+
+fn ask_user(prompt: &str, default: &str) -> String {
+    print!("{} [{}]: ", prompt, default);
+    io::stdout().flush().unwrap();
+
+    let mut input = String::new();
+    io::stdin()
+        .read_line(&mut input)
+        .expect("Failed to read line");
+
+    let trimmed = input.trim();
+    if trimmed.is_empty() {
+        default.to_string()
+    } else {
+        trimmed.to_string()
     }
 }
 

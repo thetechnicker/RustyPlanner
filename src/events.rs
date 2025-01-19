@@ -8,7 +8,7 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::{fs, isize, usize};
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 pub struct Event {
     pub name: String,
     pub time: NaiveTime,
@@ -116,8 +116,8 @@ impl EventManager {
     }
 
     #[allow(dead_code)]
-    pub fn get_event(&mut self, x: isize) -> Option<&Event> {
-        self.events.get(x as usize)
+    pub fn get_event(&mut self, x: usize) -> Option<&Event> {
+        self.events.get(x)
     }
 
     #[allow(dead_code)]
@@ -160,6 +160,20 @@ impl EventManager {
         } else {
             None
         }
+    }
+
+    #[allow(dead_code)]
+    pub fn replace_event(&mut self, x: usize, event: Event) -> Option<Event> {
+        let mut _event: Option<Event> = None;
+        if x < self.events.len() {
+            _event = Some(std::mem::replace(&mut self.events[x], event));
+        } else {
+            _event = None;
+        }
+        if self.auto_save {
+            self.save_events();
+        }
+        _event
     }
 }
 
@@ -234,7 +248,7 @@ mod tests {
             event_manager
                 .lock()
                 .unwrap()
-                .get_event(index as isize)
+                .get_event(index as usize)
                 .unwrap()
                 .name,
             "Test Event"
@@ -256,7 +270,7 @@ mod tests {
             event_manager
                 .lock()
                 .unwrap()
-                .get_event(index as isize)
+                .get_event(index as usize)
                 .unwrap()
                 .name,
             "New Test Event"
@@ -265,7 +279,7 @@ mod tests {
         event_manager.lock().unwrap().clear();
 
         assert_eq!(
-            event_manager.lock().unwrap().get_event(index as isize),
+            event_manager.lock().unwrap().get_event(index as usize),
             None
         );
 
@@ -350,7 +364,7 @@ mod tests {
         assert!(event_manager_passiv
             .lock()
             .unwrap()
-            .get_event(index as isize)
+            .get_event(index as usize)
             .is_some());
     }
 
