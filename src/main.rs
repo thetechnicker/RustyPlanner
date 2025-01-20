@@ -77,7 +77,7 @@ fn service_start() {
     #[cfg(debug_assertions)]
     {
         println!("Running local build");
-        let _child = Command::new("cargo")
+        let mut _child = Command::new("cargo")
             .arg("run")
             .arg("--bin")
             .arg("RustyPlanner_daemon")
@@ -85,6 +85,8 @@ fn service_start() {
             //.stderr(Stdio::null()) // Redirect standard error to null
             .spawn()
             .expect("Failed to start background service");
+        _child.wait().expect("Failed to wait on child process");
+        println!("Service started");
     }
     #[cfg(not(debug_assertions))]
     {
@@ -151,11 +153,6 @@ fn parse_commands(command: &str, event_manager: &Arc<Mutex<EventManager>>) {
                     match event_manager.lock().unwrap().get_event(x as usize) {
                         Some(event) => {
                             println!("Event '{}' saved at index {}", event.name, x);
-                            let new_event = edit_event(event);
-                            event_manager
-                                .lock()
-                                .unwrap()
-                                .replace_event(x as usize, new_event);
                         }
                         None => {
                             eprintln!("Error: Event not found at index {}", x);
@@ -167,9 +164,7 @@ fn parse_commands(command: &str, event_manager: &Arc<Mutex<EventManager>>) {
                     eprintln!("error")
                 }
             }
-        }
-        _ if command.starts_with("save") => {
-            event_manager.lock().unwrap().save_events();
+            return;
         }
         _ if command.starts_with("remove") => {
             let x: &str = command.strip_prefix("remove ").unwrap_or("");
@@ -189,6 +184,7 @@ fn parse_commands(command: &str, event_manager: &Arc<Mutex<EventManager>>) {
                     eprintln!("Invalid index: {}", x);
                 }
             }
+            return;
         }
         _ if command.starts_with("edit") => {
             let x: &str = command.strip_prefix("edit ").unwrap_or("");
@@ -210,10 +206,10 @@ fn parse_commands(command: &str, event_manager: &Arc<Mutex<EventManager>>) {
                     println!(
                         "Event '{:?}' edited at index {}",
                         event_manager
-                            .lock()
-                            .unwrap()
-                            .get_event(index)
-                            .expect("error"),
+                        .lock()
+                        .unwrap()
+                        .get_event(index)
+                        .expect("error"),
                         index
                     );
                 }
@@ -221,6 +217,11 @@ fn parse_commands(command: &str, event_manager: &Arc<Mutex<EventManager>>) {
                     eprintln!("Invalid index: {}", x);
                 }
             }
+            return;
+        }
+        "save" => {
+            event_manager.lock().unwrap().save_events();
+            return;
         }
         "list" => {
             event_manager.lock().unwrap().list_events();
@@ -246,6 +247,10 @@ fn edit_event(event: &Event) -> Event {
     let new_name = ask_user("Enter the new name", &event.name);
     let new_time = ask_user("Enter the new time", &event.time.to_string());
     let new_date = ask_user("Enter the new date", &event.date.to_string());
+    let new_alarm_time = ask_user(
+        "Enter the new alarm time",
+        &duration_to_string(event.allarm_time.unwrap_or(Duration::zero()).to_owned()).as_str(),
+    );
     let new_description = ask_user(
         "Enter the new description",
         &event.description.as_ref().unwrap_or(&"".to_string()),
@@ -260,10 +265,19 @@ fn edit_event(event: &Event) -> Event {
         time: is_valid_time(&new_time).unwrap_or(event.time),
         date: is_valid_date(&new_date).unwrap_or(event.date),
         has_notified: false,
-        allarm_time: event.allarm_time,
+        allarm_time: Some(parse_duration(&new_alarm_time).expect("Failed Parsing")),
         description: Some(new_description),
         location: Some(new_location),
     }
+}
+
+fn duration_to_string(duration: Duration) -> String {
+    let seconds = duration.num_seconds();
+    let hours = seconds / 3600;
+    let minutes = (seconds % 3600) / 60;
+    let _seconds = seconds % 60;
+
+    format!("{}h{}m", hours, minutes)
 }
 
 fn ask_user(prompt: &str, default: &str) -> String {
@@ -283,14 +297,23 @@ fn ask_user(prompt: &str, default: &str) -> String {
     }
 }
 
+
 fn print_help() {
     println!("Available commands:");
-    println!("  add <event details> - Add a new event");
-    println!("  list                - List all events");
-    println!("  clear               - Clear all events");
-    println!("  help                - Show this help message");
-    println!("  exit                - Exit the application");
+    println!("  add <name> <time> <date> [-d <description>] [-l <location>] [-a <time to notify before event>]  - Add a new event");
+    println!("  save                                                                                            - Save events to file");
+    println!("  remove <index>                                                                                  - Remove an event by index");
+    println!("  edit <index>                                                                                    - Edit an event by index");
+    println!("  cls                                                                                             - Clear the screen");
+    println!("  list                                                                                            - List all events");
+    println!("  clear                                                                                           - Clear all events");
+    println!("  help                                                                                            - Show this help message");
+    println!("  exit                                                                                            - Exit the application");
+    println!();
+    println!("Use the 'add' command to create a new event with optional parameters for description, location, and notification time.");
+    println!("For more details on each command, refer to the documentation.");
 }
+
 
 enum ParseMode {
     Desc,
@@ -437,7 +460,7 @@ fn parse_duration(s: &str) -> Result<Duration, String> {
     // Capture groups for hours and minutes
     let caps = re.captures(trimmed).ok_or("Invalid format".to_string())?;
 
-    println!("Captured groups: {:?}", caps);
+    //println!("Captured groups: {:?}", caps);
 
     // Parse hours and minutes
     let hours = caps

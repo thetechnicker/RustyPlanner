@@ -13,7 +13,11 @@ use std::time::Duration;
 use users::{get_current_gid, get_current_uid};
 use utils::get_path;
 
-fn main() {
+use signal_hook::flag;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::io::Error;
+
+fn main() -> Result<(), Error> {
     let stdout = File::create("/tmp/RustyPlannerDaemon.out").unwrap();
     let stderr = File::create("/tmp/RustyPlannerDaemon.err").unwrap();
 
@@ -33,27 +37,35 @@ fn main() {
     match daemonize.start() {
         Ok(_) => {
             println!("Success, daemonized");
-            main_loop();
+            main_loop()
         }
-        Err(e) => eprintln!("Error, {}", e),
+        Err(e) => {
+            eprintln!("Error, {}", e);
+            Err(Error::new(std::io::ErrorKind::Other, "Error, can't daemonize"))
+        }
+
     }
 }
 
-pub fn main_loop() {
+pub fn main_loop() -> Result<(), Error> {
+    let term = Arc::new(AtomicBool::new(false));
+
+    flag::register(signal_hook::consts::SIGTERM, Arc::clone(&term))?;
+
     let data_file_path = get_path();
 
     let event_manager: Arc<Mutex<EventManager>>;
 
     if let Some(dfp) = &data_file_path {
-        event_manager = EventManager::new(dfp.clone(), true, EventManagerMode::Passive);
+        event_manager = EventManager::new(dfp.clone(), false, EventManagerMode::Passive);
     } else {
-        eprintln!("error cant create Config file");
-        return;
+        eprintln!("Can't open Event File");
+        return Err(Error::new(std::io::ErrorKind::Other, "Can't open Event File"));
     }
 
     // event_manager.lock().unwrap().read_events_from_file();
 
-    loop {
+    while !term.load(Ordering::Relaxed) {
         let time = chrono::Local::now().naive_local();
         println!(
             "{}: Background service is running...",
@@ -88,4 +100,10 @@ pub fn main_loop() {
         }
         thread::sleep(Duration::from_millis(250));
     }
+
+    println!("Received SIGTERM kill signal. Exiting...");
+    
+    fs::remove_file("/tmp/RustyPlannerDaemon.pid")?;
+    
+    Ok(())
 }
