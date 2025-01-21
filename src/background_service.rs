@@ -6,8 +6,8 @@ use events::{EventManager, EventManagerMode};
 // use notify_rust::Notification;
 use daemonize::Daemonize;
 use notification::send_notification;
-use std::fs::File;
 use std::fs;
+use std::fs::File;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
@@ -15,8 +15,8 @@ use users::{get_current_gid, get_current_uid};
 use utils::get_path;
 
 use signal_hook::flag;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::io::Error;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 fn main() -> Result<(), Error> {
     let stdout = File::create("/tmp/RustyPlannerDaemon.out").unwrap();
@@ -42,9 +42,11 @@ fn main() -> Result<(), Error> {
         }
         Err(e) => {
             eprintln!("Error, {}", e);
-            Err(Error::new(std::io::ErrorKind::Other, "Error, can't daemonize"))
+            Err(Error::new(
+                std::io::ErrorKind::Other,
+                "Error, can't daemonize",
+            ))
         }
-
     }
 }
 
@@ -61,7 +63,10 @@ pub fn main_loop() -> Result<(), Error> {
         event_manager = EventManager::new(dfp.clone(), false, EventManagerMode::Passive);
     } else {
         eprintln!("Can't open Event File");
-        return Err(Error::new(std::io::ErrorKind::Other, "Can't open Event File"));
+        return Err(Error::new(
+            std::io::ErrorKind::Other,
+            "Can't open Event File",
+        ));
     }
 
     // event_manager.lock().unwrap().read_events_from_file();
@@ -103,8 +108,8 @@ pub fn main_loop() -> Result<(), Error> {
     }
 
     println!("Received SIGTERM kill signal. Exiting...");
-    
+
     fs::remove_file("/tmp/RustyPlannerDaemon.pid")?;
-    
+
     Ok(())
 }
