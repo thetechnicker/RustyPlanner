@@ -7,6 +7,7 @@ use events::{EventManager, EventManagerMode};
 use daemonize::Daemonize;
 use notification::send_notification;
 use std::fs::File;
+use std::fs;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
