@@ -17,7 +17,7 @@ path = "src/background_service.rs"
 
 [dependencies]
 chrono = { version = "0.4.39", features = ["serde"] }
-directories = "5.0.1"
+directories = "6.0.0"
 notify = "8.0.0"
 notify-rust = "4.11.3"
 regex = "1.11.1"
