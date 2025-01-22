@@ -11,8 +11,8 @@ use std::fs::File;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
-use uzers::{get_current_gid, get_current_uid};
 use utils::get_path;
+use uzers::{get_current_gid, get_current_uid};
 
 use signal_hook::flag;
 use std::io::Error;
