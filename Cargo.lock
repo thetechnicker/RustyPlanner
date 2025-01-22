@@ -15,7 +15,7 @@ dependencies = [
  "regex",
  "serde",
  "serde_json",
- "users",
+ "uzers",
 ]
 
 [[package]]
@@ -1375,10 +1375,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "adb9e6ca4f869e1180728b7950e35922a7fc6397f7b641499e8f3ef06e50dc83"
 
 [[package]]
-name = "users"
-version = "0.11.0"
+name = "uzers"
+version = "0.11.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "24cc0f6d6f267b73e5a2cadf007ba8f9bc39c6a6f9666f8cf25ea809a153b032"
+checksum = "76d283dc7e8c901e79e32d077866eaf599156cbf427fffa8289aecc52c5c3f63"
 dependencies = [
  "libc",
  "log",
