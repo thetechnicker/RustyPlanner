@@ -86,7 +86,7 @@ pub fn main_loop() -> Result<(), Error> {
             if let Some(alarm_time) = event.allarm_time {
                 event_datetime -= alarm_time;
             }
-            if event_datetime <= chrono::Local::now().naive_local() && event.has_notified == false {
+            if event_datetime <= chrono::Local::now().naive_local() && !event.has_notified {
                 println!("Time to notify the user!");
                 let message = format!(
                     "Event: {}\nDescription: {}\nLocation {}\nDate: {}\nTime: {}",

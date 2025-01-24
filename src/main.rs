@@ -164,7 +164,6 @@ fn parse_commands(command: &str, event_manager: &Arc<Mutex<EventManager>>) {
                     eprintln!("error")
                 }
             }
-            return;
         }
         _ if command.starts_with("remove") => {
             let x: &str = command.strip_prefix("remove ").unwrap_or("");
@@ -184,7 +183,6 @@ fn parse_commands(command: &str, event_manager: &Arc<Mutex<EventManager>>) {
                     eprintln!("Invalid index: {}", x);
                 }
             }
-            return;
         }
         _ if command.starts_with("edit") => {
             let x: &str = command.strip_prefix("edit ").unwrap_or("");
@@ -217,11 +215,9 @@ fn parse_commands(command: &str, event_manager: &Arc<Mutex<EventManager>>) {
                     eprintln!("Invalid index: {}", x);
                 }
             }
-            return;
         }
         "save" => {
             event_manager.lock().unwrap().save_events();
-            return;
         }
         "list" => {
             event_manager.lock().unwrap().list_events();
@@ -249,15 +245,15 @@ fn edit_event(event: &Event) -> Event {
     let new_date = ask_user("Enter the new date", &event.date.to_string());
     let new_alarm_time = ask_user(
         "Enter the new alarm time",
-        &duration_to_string(event.allarm_time.unwrap_or(Duration::zero()).to_owned()).as_str(),
+        duration_to_string(event.allarm_time.unwrap_or(Duration::zero()).to_owned()).as_str(),
     );
     let new_description = ask_user(
         "Enter the new description",
-        &event.description.as_ref().unwrap_or(&"".to_string()),
+        event.description.as_ref().unwrap_or(&"".to_string()),
     );
     let new_location = ask_user(
         "Enter the new location",
-        &event.location.as_ref().unwrap_or(&"".to_string()),
+        event.location.as_ref().unwrap_or(&"".to_string()),
     );
 
     Event {
@@ -411,7 +407,7 @@ fn parse_add(input: &str) -> Option<Event> {
         time: time.unwrap(),
         date: date.unwrap(),
         has_notified: false,
-        allarm_time: allarm_time,
+        allarm_time,
         description: Some(description.trim().to_owned()),
         location: Some(location.trim().to_owned()),
     };
