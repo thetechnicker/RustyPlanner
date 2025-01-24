@@ -31,8 +31,10 @@ You can also use the application directly from the command line with the followi
 
 ### Available Commands
 
-- `add <event name> <time> [<date>]` - Add a new event
+- `add <event name> <time> <date> [-d <description>] [-l <location>] [-a <time before event to notify>]` - Add a new event
 - `remove <index>` - remove event
+- `edit <index>` - edit event
+- `cls` - Clear the screen
 - `list` - List all events
 - `clear` - Clear all events
 - `help` - Show this help message
@@ -51,6 +53,7 @@ RustyPlanner depends on the following crates:
 - `futures`
 - `daemonize`
 - `users`
+- `signal-hook`
 
 ## Installation
 
