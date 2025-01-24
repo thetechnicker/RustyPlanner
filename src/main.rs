@@ -245,7 +245,7 @@ fn edit_event(event: &Event) -> Event {
     let new_date = ask_user("Enter the new date", &event.date.to_string());
     let new_alarm_time = ask_user(
         "Enter the new alarm time",
-        duration_to_string(event.allarm_time.unwrap_or(Duration::zero()).to_owned()).as_str(),
+        duration_to_string(event.alarm_time.unwrap_or(Duration::zero()).to_owned()).as_str(),
     );
     let new_description = ask_user(
         "Enter the new description",
@@ -261,7 +261,7 @@ fn edit_event(event: &Event) -> Event {
         time: is_valid_time(&new_time).unwrap_or(event.time),
         date: is_valid_date(&new_date).unwrap_or(event.date),
         has_notified: false,
-        allarm_time: Some(parse_duration(&new_alarm_time).expect("Failed Parsing")),
+        alarm_time: Some(parse_duration(&new_alarm_time).expect("Failed Parsing")),
         description: Some(new_description),
         location: Some(new_location),
     }
@@ -325,7 +325,7 @@ fn parse_add(input: &str) -> Option<Event> {
     let mut date: Option<NaiveDate> = None;
     let mut location: String = String::from("");
     let mut description: String = String::from("");
-    let mut allarm_time: Option<Duration> = None;
+    let mut alarm_time: Option<Duration> = None;
 
     let mut is_name = true;
     let mut mode = ParseMode::None;
@@ -376,8 +376,8 @@ fn parse_add(input: &str) -> Option<Event> {
                     location += " ";
                 }
                 ParseMode::AlarmTime => {
-                    if allarm_time.is_none() {
-                        allarm_time = Some(parse_duration(part).expect("Failed Parsing"));
+                    if alarm_time.is_none() {
+                        alarm_time = Some(parse_duration(part).expect("Failed Parsing"));
                     }
                 }
                 ParseMode::None => {
@@ -407,7 +407,7 @@ fn parse_add(input: &str) -> Option<Event> {
         time: time.unwrap(),
         date: date.unwrap(),
         has_notified: false,
-        allarm_time,
+        alarm_time,
         description: Some(description.trim().to_owned()),
         location: Some(location.trim().to_owned()),
     };

@@ -2,9 +2,9 @@ use futures::channel::mpsc::{channel, Receiver};
 use futures::{SinkExt, StreamExt};
 use notify::{Config, RecommendedWatcher};
 use notify::{Event as NotifyEvent, RecursiveMode, Watcher};
+use std::fs;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
-use std::{fs, isize, usize};
 
 use super::event::Event;
 
@@ -30,11 +30,9 @@ impl EventManager {
         auto_save: bool,
         mode: EventManagerMode,
     ) -> Arc<Mutex<EventManager>> {
-        if EventManagerMode::Passive == mode {
-            if !file_path.exists() {
-                eprintln!("Error: File to monitor does not exist: {:?}", file_path);
-                std::process::exit(1);
-            }
+        if EventManagerMode::Passive == mode && !file_path.exists() {
+            eprintln!("Error: File to monitor does not exist: {:?}", file_path);
+            std::process::exit(1);
         }
 
         let event_manager = Arc::new(Mutex::new(EventManager {

@@ -83,7 +83,7 @@ pub fn main_loop() -> Result<(), Error> {
             println!("\t{index}: {event:?}");
             // is it time to notify the user?
             let mut event_datetime = event.date.and_time(event.time);
-            if let Some(alarm_time) = event.allarm_time {
+            if let Some(alarm_time) = event.alarm_time {
                 event_datetime -= alarm_time;
             }
             if event_datetime <= chrono::Local::now().naive_local() && !event.has_notified {
