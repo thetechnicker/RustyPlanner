@@ -2,8 +2,8 @@ mod events;
 
 use chrono::{Duration, NaiveDate, NaiveTime};
 use directories::BaseDirs;
-use events::Event;
-use events::{EventManager, EventManagerMode};
+use events::event::Event;
+use events::event_manager::{EventManager, EventManagerMode};
 use regex::Regex;
 use std::env;
 use std::fs;
@@ -206,10 +206,10 @@ fn parse_commands(command: &str, event_manager: &Arc<Mutex<EventManager>>) {
                     println!(
                         "Event '{:?}' edited at index {}",
                         event_manager
-                        .lock()
-                        .unwrap()
-                        .get_event(index)
-                        .expect("error"),
+                            .lock()
+                            .unwrap()
+                            .get_event(index)
+                            .expect("error"),
                         index
                     );
                 }
@@ -297,7 +297,6 @@ fn ask_user(prompt: &str, default: &str) -> String {
     }
 }
 
-
 fn print_help() {
     println!("Available commands:");
     println!("  add <name> <time> <date> [-d <description>] [-l <location>] [-a <time to notify before event>]  - Add a new event");
@@ -313,7 +312,6 @@ fn print_help() {
     println!("Use the 'add' command to create a new event with optional parameters for description, location, and notification time.");
     println!("For more details on each command, refer to the documentation.");
 }
-
 
 enum ParseMode {
     Desc,

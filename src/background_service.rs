@@ -2,7 +2,7 @@ mod events;
 mod notification;
 mod utils;
 
-use events::{EventManager, EventManagerMode};
+use events::event_manager::{EventManager, EventManagerMode};
 // use notify_rust::Notification;
 use daemonize::Daemonize;
 use notification::send_notification;
