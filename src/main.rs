@@ -256,15 +256,15 @@ fn edit_event(event: &Event) -> Event {
         event.location.as_ref().unwrap_or(&"".to_string()),
     );
 
-    Event {
-        name: new_name,
-        time: is_valid_time(&new_time).unwrap_or(event.time),
-        date: is_valid_date(&new_date).unwrap_or(event.date),
-        has_notified: false,
-        alarm_time: Some(parse_duration(&new_alarm_time).expect("Failed Parsing")),
-        description: Some(new_description),
-        location: Some(new_location),
-    }
+    Event::new(
+        new_name,
+        is_valid_time(&new_time).unwrap_or(event.time),
+        is_valid_date(&new_date).unwrap_or(event.date),
+        false,
+        Some(parse_duration(&new_alarm_time).expect("Failed Parsing")),
+        Some(new_description),
+        Some(new_location),
+    )
 }
 
 fn duration_to_string(duration: Duration) -> String {
@@ -402,15 +402,15 @@ fn parse_add(input: &str) -> Option<Event> {
 
     name = name.trim().to_owned();
 
-    let event = Event {
+    let event = Event::new(
         name,
-        time: time.unwrap(),
-        date: date.unwrap(),
-        has_notified: false,
+        time.unwrap(),
+        date.unwrap(),
+        false,
         alarm_time,
-        description: Some(description.trim().to_owned()),
-        location: Some(location.trim().to_owned()),
-    };
+        Some(description.trim().to_owned()),
+        Some(location.trim().to_owned()),
+    );
     Some(event)
 }
 
