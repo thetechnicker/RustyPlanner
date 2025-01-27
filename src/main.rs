@@ -151,13 +151,10 @@ fn parse_commands(command: &str, event_manager: &Arc<Mutex<EventManager>>) {
                     //println!("Event: {:?}", event);
                     let x = event_manager.lock().unwrap().add_event(event);
                     match event_manager.lock().unwrap().get_event(x as usize) {
-                        Some(event) => {
-                            println!("Event '{}' saved at index {}", event.name, x);
-                        }
-                        None => {
-                            eprintln!("Error: Event not found at index {}", x);
-                        }
-                    }
+                        Some(event) => println!("Event '{}' saved at index {}", event.name, x),
+                        _ => eprintln!("error"),
+                    };
+
                     //event_manager.lock().unwrap().save_events();
                 }
                 None => {
@@ -188,26 +185,16 @@ fn parse_commands(command: &str, event_manager: &Arc<Mutex<EventManager>>) {
             let x: &str = command.strip_prefix("edit ").unwrap_or("");
             match x.trim().parse::<usize>() {
                 Ok(index) => {
-                    let event = event_manager
-                        .lock()
-                        .unwrap()
-                        .get_event(index)
-                        .expect("Error")
-                        // .clone();
-                        .to_owned();
-                    println!("Event '{}' edited at index {}", event.name, index);
-                    event_manager
-                        .lock()
-                        .unwrap()
-                        .replace_event(index, edit_event(&event));
-
+                    match event_manager.lock().unwrap().get_event_mut(index) {
+                        Some(event) => {
+                            println!("Event '{}' edited at index {}", event.name, index);
+                            edit_event(event);
+                        }
+                        _ => eprintln!("error"),
+                    };
                     println!(
                         "Event '{:?}' edited at index {}",
-                        event_manager
-                            .lock()
-                            .unwrap()
-                            .get_event(index)
-                            .expect("error"),
+                        event_manager.lock().unwrap().get_event(index),
                         index
                     );
                 }
@@ -238,33 +225,29 @@ fn parse_commands(command: &str, event_manager: &Arc<Mutex<EventManager>>) {
     }
 }
 
-fn edit_event(event: &Event) -> Event {
+fn edit_event(event: &mut Event) {
     // Ask the user for the new name
-    let new_name = ask_user("Enter the new name", &event.name);
-    let new_time = ask_user("Enter the new time", &event.time.to_string());
-    let new_date = ask_user("Enter the new date", &event.date.to_string());
-    let new_alarm_time = ask_user(
-        "Enter the new alarm time",
-        duration_to_string(event.alarm_time.unwrap_or(Duration::zero()).to_owned()).as_str(),
+    event.name = ask_user("Enter the new name", &event.name);
+    event.time = is_valid_time(&ask_user("Enter the new time", &event.time.to_string()))
+        .unwrap_or(event.time);
+    event.date = is_valid_date(&ask_user("Enter the new date", &event.date.to_string()))
+        .unwrap_or(event.date);
+
+    event.alarm_time = Some(
+        parse_duration(&ask_user(
+            "Enter the new alarm time",
+            duration_to_string(event.alarm_time.unwrap_or(Duration::zero()).to_owned()).as_str(),
+        ))
+        .expect("Failed Parsing"),
     );
-    let new_description = ask_user(
+    event.description = Some(ask_user(
         "Enter the new description",
         event.description.as_ref().unwrap_or(&"".to_string()),
-    );
-    let new_location = ask_user(
+    ));
+    event.location = Some(ask_user(
         "Enter the new location",
         event.location.as_ref().unwrap_or(&"".to_string()),
-    );
-
-    Event::new(
-        new_name,
-        is_valid_time(&new_time).unwrap_or(event.time),
-        is_valid_date(&new_date).unwrap_or(event.date),
-        false,
-        Some(parse_duration(&new_alarm_time).expect("Failed Parsing")),
-        Some(new_description),
-        Some(new_location),
-    )
+    ));
 }
 
 fn duration_to_string(duration: Duration) -> String {
