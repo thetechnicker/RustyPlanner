@@ -7,8 +7,7 @@ use std::path::PathBuf;
 #[cfg(test)]
 pub fn get_path() -> std::option::Option<PathBuf> {
     let tmp_dir = std::env::temp_dir();
-    let data_file_path = Some(tmp_dir.join("dates.json"));
-    return data_file_path;
+    Some(tmp_dir.join("dates.json"))
 }
 
 #[cfg(not(test))]
