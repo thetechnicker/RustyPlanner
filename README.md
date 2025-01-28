@@ -68,30 +68,35 @@ cargo run
 
 ## TODO List
 
-* [x] Basic Functions
-  * [x] add event
-  * [x] remove event
-  * [x] edit
-  * [x] clear all
-* [x] UI/UX
-  * [x] event managing
-    * [x] interactive mode
-    * [x] cli mode
-  * [x] background service managing
-    * [x] starting / stopping via main programm
-  * [ ] tui application
-* [x] background service
-  * [x] Basic Notification
-  * [x] daemonized
-  * [ ] Customizable Notifications
-* [ ] Event Features
-  * [x] simple events
-  * [ ] repeating events
-  * [ ] event chategorisation
-  * [ ] search functionality
-  * [ ] export/import of events
-* [ ] Documentation
-* [ ] Tests
+### Basic Functions
+- [x] Add event
+- [x] Remove event
+- [x] Edit event
+- [x] Clear all events
+
+### UI/UX
+- [x] Event Managing
+  - [x] Interactive mode
+  - [x] CLI mode
+- [x] Background Service Managing
+  - [x] Start/Stop via main program
+- [ ] TUI Application
+
+### Background Service
+- [x] Basic Notification
+- [x] Daemonized
+- [ ] Customizable Notifications
+
+### Event Features
+- [x] Simple events
+- [ ] Repeating events
+- [ ] Event categorization
+- [ ] Search functionality
+- [ ] Export/Import of events
+
+### Maintenance
+- [ ] Write documentation
+- [ ] Write tests
 
 
 ## Contributing
