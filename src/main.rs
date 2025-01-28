@@ -1,36 +1,22 @@
 mod events;
+mod utils;
 
-use chrono::{Duration, NaiveDate, NaiveTime};
-use directories::BaseDirs;
-use events::event::Event;
+use chrono::Duration;
+use events::event::{event_from_cmd, Event};
 use events::event_manager::{EventManager, EventManagerMode};
-use regex::Regex;
 use std::env;
 use std::fs;
 use std::io::{self, Write};
-use std::path::PathBuf;
 use std::process::Command;
 use std::sync::{Arc, Mutex};
+use utils::{
+    clear_screen, duration_to_string, get_path, is_valid_date, is_valid_time, parse_duration,
+};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
 
-    let data_file_path: Option<PathBuf>;
-
-    if let Some(base_dirs) = BaseDirs::new() {
-        let data_base_dir = base_dirs.data_dir();
-
-        println!("Data Directory: {:?}", data_base_dir);
-
-        let data_dir = data_base_dir.join("RustyPlanner");
-
-        fs::create_dir_all(data_dir.clone()).expect("Failed to create data directory");
-
-        data_file_path = Some(data_dir.join("dates.json"));
-    } else {
-        eprintln!("Could not find base directories.");
-        data_file_path = None;
-    }
+    let data_file_path = get_path();
 
     let event_manager: Arc<Mutex<EventManager>>;
 
@@ -146,18 +132,15 @@ fn command_mode(event_manager: &Arc<Mutex<EventManager>>, commands: &[String]) {
 fn parse_commands(command: &str, event_manager: &Arc<Mutex<EventManager>>) {
     match command {
         _ if command.starts_with("add") => {
-            match parse_add(command) {
+            match event_from_cmd(command) {
                 Some(event) => {
                     //println!("Event: {:?}", event);
                     let x = event_manager.lock().unwrap().add_event(event);
                     match event_manager.lock().unwrap().get_event(x as usize) {
-                        Some(event) => {
-                            println!("Event '{}' saved at index {}", event.name, x);
-                        }
-                        None => {
-                            eprintln!("Error: Event not found at index {}", x);
-                        }
-                    }
+                        Some(event) => println!("Event '{}' saved at index {}", event.name, x),
+                        _ => eprintln!("error"),
+                    };
+
                     //event_manager.lock().unwrap().save_events();
                 }
                 None => {
@@ -188,26 +171,16 @@ fn parse_commands(command: &str, event_manager: &Arc<Mutex<EventManager>>) {
             let x: &str = command.strip_prefix("edit ").unwrap_or("");
             match x.trim().parse::<usize>() {
                 Ok(index) => {
-                    let event = event_manager
-                        .lock()
-                        .unwrap()
-                        .get_event(index)
-                        .expect("Error")
-                        // .clone();
-                        .to_owned();
-                    println!("Event '{}' edited at index {}", event.name, index);
-                    event_manager
-                        .lock()
-                        .unwrap()
-                        .replace_event(index, edit_event(&event));
-
+                    match event_manager.lock().unwrap().get_event_mut(index) {
+                        Some(event) => {
+                            println!("Event '{}' edited at index {}", event.name, index);
+                            edit_event(event);
+                        }
+                        _ => eprintln!("error"),
+                    };
                     println!(
                         "Event '{:?}' edited at index {}",
-                        event_manager
-                            .lock()
-                            .unwrap()
-                            .get_event(index)
-                            .expect("error"),
+                        event_manager.lock().unwrap().get_event(index),
                         index
                     );
                 }
@@ -238,42 +211,29 @@ fn parse_commands(command: &str, event_manager: &Arc<Mutex<EventManager>>) {
     }
 }
 
-fn edit_event(event: &Event) -> Event {
+fn edit_event(event: &mut Event) {
     // Ask the user for the new name
-    let new_name = ask_user("Enter the new name", &event.name);
-    let new_time = ask_user("Enter the new time", &event.time.to_string());
-    let new_date = ask_user("Enter the new date", &event.date.to_string());
-    let new_alarm_time = ask_user(
-        "Enter the new alarm time",
-        duration_to_string(event.alarm_time.unwrap_or(Duration::zero()).to_owned()).as_str(),
+    event.name = ask_user("Enter the new name", &event.name);
+    event.time = is_valid_time(&ask_user("Enter the new time", &event.time.to_string()))
+        .unwrap_or(event.time);
+    event.date = is_valid_date(&ask_user("Enter the new date", &event.date.to_string()))
+        .unwrap_or(event.date);
+
+    event.alarm_time = Some(
+        parse_duration(&ask_user(
+            "Enter the new alarm time",
+            duration_to_string(event.alarm_time.unwrap_or(Duration::zero()).to_owned()).as_str(),
+        ))
+        .expect("Failed Parsing"),
     );
-    let new_description = ask_user(
+    event.description = Some(ask_user(
         "Enter the new description",
         event.description.as_ref().unwrap_or(&"".to_string()),
-    );
-    let new_location = ask_user(
+    ));
+    event.location = Some(ask_user(
         "Enter the new location",
         event.location.as_ref().unwrap_or(&"".to_string()),
-    );
-
-    Event::new(
-        new_name,
-        is_valid_time(&new_time).unwrap_or(event.time),
-        is_valid_date(&new_date).unwrap_or(event.date),
-        false,
-        Some(parse_duration(&new_alarm_time).expect("Failed Parsing")),
-        Some(new_description),
-        Some(new_location),
-    )
-}
-
-fn duration_to_string(duration: Duration) -> String {
-    let seconds = duration.num_seconds();
-    let hours = seconds / 3600;
-    let minutes = (seconds % 3600) / 60;
-    let _seconds = seconds % 60;
-
-    format!("{}h{}m", hours, minutes)
+    ));
 }
 
 fn ask_user(prompt: &str, default: &str) -> String {
@@ -307,165 +267,4 @@ fn print_help() {
     println!();
     println!("Use the 'add' command to create a new event with optional parameters for description, location, and notification time.");
     println!("For more details on each command, refer to the documentation.");
-}
-
-enum ParseMode {
-    Desc,
-    Loc,
-    AlarmTime,
-    None,
-}
-
-fn parse_add(input: &str) -> Option<Event> {
-    let command = input.strip_prefix("add ").unwrap_or("");
-    let parts: Vec<&str> = command.split_whitespace().collect();
-
-    let mut name: String = String::from("");
-    let mut time: Option<NaiveTime> = None;
-    let mut date: Option<NaiveDate> = None;
-    let mut location: String = String::from("");
-    let mut description: String = String::from("");
-    let mut alarm_time: Option<Duration> = None;
-
-    let mut is_name = true;
-    let mut mode = ParseMode::None;
-    for part in parts {
-        if date.is_none() {
-            if let Some(_date) = is_valid_date(part) {
-                date = Some(_date);
-                is_name = false;
-                continue;
-            }
-        }
-        if time.is_none() {
-            if let Some(_time) = is_valid_time(part) {
-                time = Some(_time);
-                is_name = false;
-                continue;
-            }
-        }
-        if is_name {
-            name += part;
-            name += " ";
-        } else {
-            match part {
-                "-d" => {
-                    mode = ParseMode::Desc;
-                    continue;
-                }
-                "-l" => {
-                    mode = ParseMode::Loc;
-                    continue;
-                }
-                "-a" => {
-                    mode = ParseMode::AlarmTime;
-                    continue;
-                }
-                _ => {
-                    //mode=ParseMode::None;
-                }
-            }
-
-            match mode {
-                ParseMode::Desc => {
-                    description += part;
-                    description += " ";
-                }
-                ParseMode::Loc => {
-                    location += part;
-                    location += " ";
-                }
-                ParseMode::AlarmTime => {
-                    if alarm_time.is_none() {
-                        alarm_time = Some(parse_duration(part).expect("Failed Parsing"));
-                    }
-                }
-                ParseMode::None => {
-                    //println!("idk where to put {}", part);
-                }
-            }
-        }
-    }
-
-    if date.is_none() {
-        eprintln!("Error: Date must be provided.");
-        return None;
-    }
-    if time.is_none() {
-        eprintln!("Error: Time must be provided.");
-        return None;
-    }
-    if is_name {
-        eprintln!("Error: Name not Defined");
-        return None;
-    }
-
-    name = name.trim().to_owned();
-
-    let event = Event::new(
-        name,
-        time.unwrap(),
-        date.unwrap(),
-        false,
-        alarm_time,
-        Some(description.trim().to_owned()),
-        Some(location.trim().to_owned()),
-    );
-    Some(event)
-}
-
-fn is_valid_date(date_str: &str) -> Option<NaiveDate> {
-    let formats = ["%Y-%m-%d", "%d-%m-%Y", "%d.%m.%Y", "%m/%d/%Y"];
-    for format in &formats {
-        if let Ok(date) = NaiveDate::parse_from_str(date_str, format) {
-            return Some(date);
-        }
-    }
-    None
-}
-
-fn is_valid_time(time_str: &str) -> Option<NaiveTime> {
-    let formats = ["%H:%M:%S", "%H:%M", "%I:%M %p"];
-    for format in &formats {
-        if let Ok(time) = NaiveTime::parse_from_str(time_str, format) {
-            return Some(time);
-        }
-    }
-    None
-}
-
-fn clear_screen() {
-    // ANSI escape code to clear the screen
-    print!("{}[2J", 27 as char);
-    // Move the cursor to the top left corner
-    print!("{}[H", 27 as char);
-    // Flush the output to ensure it is displayed
-    io::stdout().flush().unwrap();
-}
-
-fn parse_duration(s: &str) -> Result<Duration, String> {
-    let trimmed = s.trim();
-    println!("{}", trimmed);
-
-    // Regular expression to match hours and minutes
-    let re =
-        Regex::new(r"(?:(\d+)h)?(?:(\d+)m)?").map_err(|_| "Failed to compile regex".to_string())?;
-
-    // Capture groups for hours and minutes
-    let caps = re.captures(trimmed).ok_or("Invalid format".to_string())?;
-
-    //println!("Captured groups: {:?}", caps);
-
-    // Parse hours and minutes
-    let hours = caps
-        .get(1)
-        .and_then(|m| m.as_str().parse::<i64>().ok())
-        .unwrap_or(0);
-    let minutes = caps
-        .get(2)
-        .and_then(|m| m.as_str().parse::<i64>().ok())
-        .unwrap_or(0);
-
-    // Create a Duration from the parsed values
-    Ok(Duration::hours(hours) + Duration::minutes(minutes))
 }

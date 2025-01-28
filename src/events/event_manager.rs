@@ -104,8 +104,17 @@ impl EventManager {
 
     #[allow(dead_code)]
     pub fn get_event(&mut self, x: usize) -> Option<&Event> {
-        self.events.get(x)
+        Some(&self.events[x])
     }
+    #[allow(dead_code)]
+    pub fn get_event_mut(&mut self, x: usize) -> Option<&mut Event> {
+        Some(&mut self.events[x])
+    }
+
+    // #[allow(dead_code)]
+    // pub fn get_event_mut(&mut self, x: usize) -> Option<Event> {
+    //     self.events.get_mut(x)
+    // }
 
     #[allow(dead_code)]
     pub fn iter_events(&self) -> impl Iterator<Item = &Event> {

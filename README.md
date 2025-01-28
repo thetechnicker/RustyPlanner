@@ -66,6 +66,39 @@ cargo build
 cargo run
 ```
 
+## TODO List
+
+### Basic Functions
+- [x] Add event
+- [x] Remove event
+- [x] Edit event
+- [x] Clear all events
+
+### UI/UX
+- [x] Event Managing
+  - [x] Interactive mode
+  - [x] CLI mode
+- [x] Background Service Managing
+  - [x] Start/Stop via main program
+- [ ] TUI Application
+
+### Background Service
+- [x] Basic Notification
+- [x] Daemonized
+- [ ] Customizable Notifications
+
+### Event Features
+- [x] Simple events
+- [ ] Repeating events
+- [ ] Event categorization
+- [ ] Search functionality
+- [ ] Export/Import of events
+
+### Maintenance
+- [ ] Write documentation
+- [ ] Write tests
+
+
 ## Contributing
 
 If you would like to contribute to RustyPlanner, please fork the repository and submit a pull request.
