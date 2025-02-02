@@ -131,7 +131,7 @@ fn command_mode(event_manager: &Arc<Mutex<EventManager>>, commands: &[String]) {
 
 fn parse_commands(command: &str, event_manager: &Arc<Mutex<EventManager>>) {
     match command {
-        _ if command.starts_with("add") => {
+        _ if command.starts_with("old_add") => {
             match event_from_cmd(command) {
                 Some(event) => {
                     //println!("Event: {:?}", event);
@@ -147,6 +147,11 @@ fn parse_commands(command: &str, event_manager: &Arc<Mutex<EventManager>>) {
                     eprintln!("error")
                 }
             }
+        }
+        _ if command.starts_with("add") => {
+            let mut event = Event::default();
+            edit_event(&mut event);
+            println!("{:?}", event);
         }
         _ if command.starts_with("remove") => {
             let x: &str = command.strip_prefix("remove ").unwrap_or("");
