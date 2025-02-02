@@ -82,19 +82,17 @@ pub fn main_loop() -> Result<(), Error> {
         for (index, event) in event_manager.lock().unwrap().iter_events_mut().enumerate() {
             println!("\t{index}: {event:?}");
             // is it time to notify the user?
-            let mut event_datetime = event.date.and_time(event.time);
-            if let Some(alarm_time) = event.alarm_time {
-                event_datetime -= alarm_time;
-            }
-            if event_datetime <= chrono::Local::now().naive_local() && !event.has_notified {
+
+            if event.is_alarm(time) && !event.has_notified {
                 println!("Time to notify the user!");
+                let event_datetime = event.get_event_datetime();
                 let message = format!(
                     "Event: {}\nDescription: {}\nLocation {}\nDate: {}\nTime: {}",
                     event.name,
                     event.description.as_ref().unwrap_or(&String::from("")),
                     event.location.as_ref().unwrap_or(&String::from("")),
-                    event.date,
-                    event.time
+                    event_datetime.date(),
+                    event_datetime.time()
                 );
                 send_notification(&event.name, &message);
                 event.has_notified = true;

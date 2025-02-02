@@ -214,22 +214,41 @@ fn parse_commands(command: &str, event_manager: &Arc<Mutex<EventManager>>) {
 fn edit_event(event: &mut Event) {
     // Ask the user for the new name
     event.name = ask_user("Enter the new name", &event.name);
-    event.time = is_valid_time(&ask_user("Enter the new time", &event.time.to_string()))
-        .unwrap_or(event.time);
-    event.date = is_valid_date(&ask_user("Enter the new date", &event.date.to_string()))
-        .unwrap_or(event.date);
 
-    event.alarm_time = Some(
-        parse_duration(&ask_user(
-            "Enter the new alarm time",
-            duration_to_string(event.alarm_time.unwrap_or(Duration::zero()).to_owned()).as_str(),
-        ))
-        .expect("Failed Parsing"),
+    // Ask for the new time and validate it
+    let new_time = ask_user(
+        "Enter the new time",
+        &event
+            .time
+            .as_ref()
+            .map_or("".to_string(), |t| t.to_string()),
     );
+    event.time = is_valid_time(&new_time).or_else(|| event.time.clone());
+
+    // Ask for the new date and validate it
+    let new_date = ask_user(
+        "Enter the new date",
+        &event
+            .date
+            .as_ref()
+            .map_or("".to_string(), |d| d.to_string()),
+    );
+    event.date = is_valid_date(&new_date).or_else(|| event.date.clone());
+
+    // Ask for the new alarm time and parse it
+    let new_alarm_time = ask_user(
+        "Enter the new alarm time",
+        &duration_to_string(event.alarm_time.unwrap_or(Duration::zero())).as_str(),
+    );
+    event.alarm_time = parse_duration(&new_alarm_time).ok();
+
+    // Ask for the new description
     event.description = Some(ask_user(
         "Enter the new description",
         event.description.as_ref().unwrap_or(&"".to_string()),
     ));
+
+    // Ask for the new location
     event.location = Some(ask_user(
         "Enter the new location",
         event.location.as_ref().unwrap_or(&"".to_string()),
