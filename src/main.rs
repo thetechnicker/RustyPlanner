@@ -149,7 +149,7 @@ fn parse_commands(command: &str, event_manager: &Arc<Mutex<EventManager>>) {
             }
         }
         _ if command.starts_with("add") => {
-            let mut event = Event::default();
+            let mut event = Event::from_str(command);
             edit_event(&mut event);
             println!("{:?}", event);
         }

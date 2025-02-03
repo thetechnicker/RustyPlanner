@@ -4,11 +4,33 @@ use crate::utils::{is_valid_date, is_valid_time, parse_duration};
 use chrono::{Datelike, Duration, Local, NaiveDate, NaiveDateTime, NaiveTime, Weekday};
 use serde::{Deserialize, Serialize};
 
+fn parse_weekday(value: &str) -> Option<Weekday> {
+    match value.to_lowercase().as_str() {
+        "mon" | "monday" => Some(Weekday::Mon),
+        "tue" | "tuesday" => Some(Weekday::Tue),
+        "wed" | "wednesday" => Some(Weekday::Wed),
+        "thu" | "thursday" => Some(Weekday::Thu),
+        "fri" | "friday" => Some(Weekday::Fri),
+        "sat" | "saturday" => Some(Weekday::Sat),
+        "sun" | "sunday" => Some(Weekday::Sun),
+        _ => None, // Return None for invalid input
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone, Default)]
 pub enum EventType {
     REPEATING,
     #[default]
     SINGLETIME,
+}
+
+impl std::fmt::Display for EventType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.pad(match *self {
+            EventType::SINGLETIME => "SINGLETIME",
+            EventType::REPEATING => "REPEATING",
+        })
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
@@ -207,54 +229,110 @@ impl Event {
         }
     }
 
+    pub fn new(
+        name: String,
+        time: Option<NaiveTime>,
+        date: Option<NaiveDate>,
+        repeating_day: Option<RepeatingWeekDay>,
+        event_type: EventType,
+        description: Option<String>,
+        location: Option<String>,
+        alarm_time: Option<Duration>,
+    ) -> Self {
+        Self {
+            name,
+            time,
+            date,
+            repeating_day,
+            event_type,
+            description,
+            location,
+            alarm_time,
+            has_notified: false,
+        }
+    }
+
     #[allow(dead_code)]
-    #[allow(unused_mut)]
-    #[allow(unused_variables)]
     pub fn from_str<S: Into<String>>(input: S) -> Self {
         let mut string: String = input.into();
         // let mut string = input.into();
-        string = string.strip_prefix("add ").unwrap_or("").to_string();
+        string = string.strip_prefix("add ").unwrap_or(&string).to_string();
         let parts: Vec<&str> = string.split_terminator(",").collect();
 
         let mut name: String = "New Event".to_owned();
         let mut time: Option<NaiveTime> = None;
         let mut date: Option<NaiveDate> = None;
-        let mut repeating_day: Option<RepeatingWeekDay> = None;
+        let mut weekday: Option<Weekday> = None;
         let mut event_type: EventType = EventType::default();
         let mut description: Option<String> = None;
         let mut location: Option<String> = None;
         let mut alarm_time: Option<Duration> = None;
-        for part in parts.iter() {
+
+        for (index, part) in parts.iter().enumerate() {
             let part = (*part).to_string();
             let a: Vec<&str> = part.split_terminator(":").collect();
             let trimmed: Vec<&str> = a.iter().map(|s| s.trim()).collect();
-            let (key, value) = (
-                *(trimmed.get(0).unwrap_or(&"")),
-                *(trimmed.get(1).unwrap_or(&"")),
-            );
-            match key {
-                "mode" => {
-                    if value == "SINGLETIME" {
+
+            let mut key = *(trimmed.get(0).unwrap_or(&""));
+            let mut value = *(trimmed.get(1).unwrap_or(&""));
+            if value == "" {
+                value = key;
+                key = ""
+            }
+            println!("key: {}, value: {}", key, value);
+
+            match (index, key.to_lowercase().as_str()) {
+                (_, "mode") | (0, "") => {
+                    let value_lower = value.to_lowercase();
+                    if value_lower == "one-time" {
                         event_type = EventType::SINGLETIME;
+                    } else if value == "recurring" {
+                        event_type = EventType::REPEATING;
+                    } else {
+                        eprintln!(
+                            "Not A valid value, event type will be set to {}",
+                            event_type
+                        )
                     }
                 }
+
+                (_, "name") | (1, "") => name = value.to_owned(),
+
+                (_, "time") => time = is_valid_time(value),
+                (2, "") if event_type == EventType::SINGLETIME => time = is_valid_time(value),
+                (3, "") if event_type == EventType::REPEATING => time = is_valid_time(value),
+
+                (_, "date") | (3, "") if event_type == EventType::SINGLETIME => {
+                    date = is_valid_date(value)
+                }
+
+                (_, "weekday") | (2, "") if event_type == EventType::REPEATING => {
+                    weekday = parse_weekday(value)
+                }
+
+                (_, "description") | (4, "") => description = Some(value.to_owned()),
+                (_, "location") | (5, "") => location = Some(value.to_owned()),
+                (_, "alarm time") | (6, "") => alarm_time = parse_duration(value).ok(),
                 _ => todo!("different keys need to be implemented"),
             }
         }
 
-        if event_type == EventType::SINGLETIME {
-            return Event::new_single_time_event(
-                name.to_string(),
-                time.unwrap(),
-                date.unwrap(),
-                false,
-                alarm_time,
-                description,
-                location,
-            );
+        let repeating_day = if let (Some(weekday), Some(time)) = (weekday, time) {
+            Some(RepeatingWeekDay { weekday, time })
         } else {
-            unreachable!();
-        }
+            None
+        };
+
+        Self::new(
+            name,
+            time,
+            date,
+            repeating_day,
+            event_type,
+            description,
+            location,
+            alarm_time,
+        )
     }
 }
 
