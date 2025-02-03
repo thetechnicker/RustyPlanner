@@ -1,5 +1,25 @@
-use chrono::{DateTime, Local};
+use chrono::{DateTime, Duration, Local, Weekday};
 use serde::{Deserialize, Serialize};
+
+fn parse_weekday(value: &str) -> Option<Weekday> {
+    match value.to_lowercase().as_str() {
+        "mon" | "monday" => Some(Weekday::Mon),
+        "tue" | "tuesday" => Some(Weekday::Tue),
+        "wed" | "wednesday" => Some(Weekday::Wed),
+        "thu" | "thursday" => Some(Weekday::Thu),
+        "fri" | "friday" => Some(Weekday::Fri),
+        "sat" | "saturday" => Some(Weekday::Sat),
+        "sun" | "sunday" => Some(Weekday::Sun),
+        _ => None, // Return None for invalid input
+    }
+}
+
+fn parse_weekday_default(value: &str) -> Weekday {
+    match parse_weekday(value) {
+        Some(weekday) => weekday,
+        _ => Weekday::Mon,
+    }
+}
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum NotificationMethod {
@@ -14,6 +34,23 @@ pub struct Notification {
     pub method: NotificationMethod, // Method of notification (e.g., email, SMS, push)
 }
 
+#[allow(dead_code)]
+impl Notification {
+    pub fn from_args(args: &[String]) -> Self {
+        let notify_before = args[0].parse().expect("Invalid notify_before");
+        let method = match args[1].as_str() {
+            "Email" => NotificationMethod::Email,
+            "SMS" => NotificationMethod::SMS,
+            "Push" => NotificationMethod::Push,
+            _ => panic!("Invalid notification method"),
+        };
+        Notification {
+            notify_before,
+            method,
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum RecurrenceFrequency {
     Daily,
@@ -26,9 +63,43 @@ pub enum RecurrenceFrequency {
 pub struct Recurrence {
     pub frequency: RecurrenceFrequency, // Frequency of recurrence (e.g., daily, weekly, monthly)
     pub interval: i32,                  // Interval between occurrences (e.g., every 2 weeks)
-    pub days_of_week: Vec<String>, // Days of the week for weekly events (e.g., ["Monday", "Wednesday"])
+    pub days_of_week: Vec<Weekday>, // Days of the week for weekly events (e.g., ["Monday", "Wednesday"])
     pub start_date: DateTime<Local>, // Start date for the recurrence
     pub end_date: Option<DateTime<Local>>, // End date for the recurrence (optional)
+}
+
+#[allow(dead_code)]
+impl Recurrence {
+    pub fn from_args(args: &[String]) -> Self {
+        let frequency = match args[0].as_str() {
+            "Daily" => RecurrenceFrequency::Daily,
+            "Weekly" => RecurrenceFrequency::Weekly,
+            "Monthly" => RecurrenceFrequency::Monthly,
+            "Yearly" => RecurrenceFrequency::Yearly,
+            _ => panic!("Invalid recurrence frequency"),
+        };
+        let interval = args[1].parse().expect("Invalid interval");
+        let days_of_week = args[2].split(',').map(parse_weekday_default).collect();
+        let start_date = DateTime::parse_from_rfc3339(&args[3])
+            .expect("Invalid start date")
+            .with_timezone(&Local);
+        let end_date = if args.len() > 4 {
+            Some(
+                DateTime::parse_from_rfc3339(&args[4])
+                    .expect("Invalid end date")
+                    .with_timezone(&Local),
+            )
+        } else {
+            None
+        };
+        Recurrence {
+            frequency,
+            interval,
+            days_of_week,
+            start_date,
+            end_date,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -36,6 +107,20 @@ pub struct Attendee {
     pub attendee_id: String, // Unique identifier for the attendee
     pub name: String,        // Name of the attendee
     pub email: String,       // Email of the attendee
+}
+
+#[allow(dead_code)]
+impl Attendee {
+    pub fn from_args(args: &[String]) -> Self {
+        let attendee_id = args[0].clone();
+        let name = args[1].clone();
+        let email = args[2].clone();
+        Attendee {
+            attendee_id,
+            name,
+            email,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -62,13 +147,14 @@ impl std::fmt::Display for Event {
 
 impl Default for Event {
     fn default() -> Self {
+        let start_time = Local::now();
         Self {
             event_id: Default::default(),
             title: Default::default(),
             description: Default::default(),
             location: Default::default(),
-            start_time: Default::default(),
-            end_time: Default::default(),
+            start_time,
+            end_time: start_time + Duration::hours(1),
             is_recurring: Default::default(),
             recurrence: Default::default(),
             attendees: Default::default(),
@@ -81,6 +167,41 @@ impl Default for Event {
 
 #[allow(dead_code)]
 impl Event {
+    pub fn from_args(args: &[String]) -> Self {
+        let len = args.len();
+
+        // Initialize a new Event instance with default values
+        let mut event = Event::default();
+
+        // Set the event ID, title, description, and start time
+        if let Some(id) = args.get(0) {
+            event = event.set_event_id(id.clone());
+        }
+        if let Some(title) = args.get(1) {
+            event = event.set_title(title.clone());
+        }
+        if let Some(description) = args.get(2) {
+            event = event.set_description(description.clone());
+        }
+        if let Some(start_time_str) = args.get(3) {
+            if let Ok(start_time) = DateTime::parse_from_rfc3339(start_time_str) {
+                event = event.set_start_time(start_time.with_timezone(&Local));
+            }
+        }
+
+        // Determine if the event is recurring
+        if len > 4 {
+            let is_recurring = args[4].parse().expect("Invalid is_recurring");
+            event = event.set_is_recurring(is_recurring);
+        }
+
+        event
+    }
+
+    fn set_event_id(mut self, event_id: String) -> Event {
+        self.event_id = event_id;
+        self
+    }
     pub fn set_title(mut self, title: String) -> Self {
         self.title = title;
         self
@@ -125,10 +246,7 @@ impl Event {
         self.notification_settings = notification_settings;
         self
     }
-}
 
-#[allow(dead_code)]
-impl Event {
     // Update the title of the event
     pub fn update_title(&mut self, new_title: String) {
         self.title = new_title;

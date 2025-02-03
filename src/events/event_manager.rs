@@ -6,24 +6,26 @@ use std::fs;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
+use crate::utils::parse_args;
+
 use super::event::Event;
 
 #[derive(PartialEq, Eq)]
 pub enum EventManagerMode {
-    #[allow(dead_code)]
-    Active, // manages events, has read/write access
+    Active,  // manages events, has read/write access
     Passive, // handles notification, read only
 }
 
 pub struct EventManager {
     file_path: PathBuf,
-    #[allow(dead_code)]
+
     auto_save: bool,
     events: Vec<Event>,
-    #[allow(dead_code)]
+
     mode: EventManagerMode,
 }
 
+#[allow(dead_code)]
 impl EventManager {
     pub fn new(
         file_path: PathBuf,
@@ -84,15 +86,13 @@ impl EventManager {
         }
     }
 
-    #[allow(dead_code)]
     pub fn list_events(&self) {
         println!("Events:");
         for (index, event) in self.events.iter().enumerate() {
-            println!("\t{index}: {event:?}");
+            println!("{index}: {}", event);
         }
     }
 
-    #[allow(dead_code)]
     pub fn clear(&mut self) {
         if EventManagerMode::Active == self.mode {
             self.events.clear();
@@ -104,26 +104,22 @@ impl EventManager {
         }
     }
 
-    #[allow(dead_code)]
     pub fn get_event(&mut self, x: usize) -> Option<&Event> {
         Some(&self.events[x])
     }
-    #[allow(dead_code)]
+
     pub fn get_event_mut(&mut self, x: usize) -> Option<&mut Event> {
         Some(&mut self.events[x])
     }
 
-    #[allow(dead_code)]
     pub fn iter_events(&self) -> impl Iterator<Item = &Event> {
         self.events.iter()
     }
 
-    #[allow(dead_code)]
     pub fn iter_events_mut(&mut self) -> impl Iterator<Item = &mut Event> {
         self.events.iter_mut()
     }
 
-    #[allow(dead_code)]
     pub fn add_event(&mut self, event: Event) -> isize {
         if EventManagerMode::Active == self.mode {
             self.events.push(event);
@@ -136,7 +132,6 @@ impl EventManager {
         }
     }
 
-    #[allow(dead_code)]
     pub fn remove_event(&mut self, x: usize) -> Option<Event> {
         if x < self.events.len() {
             Some(self.events.remove(x))
@@ -145,7 +140,6 @@ impl EventManager {
         }
     }
 
-    #[allow(dead_code)]
     pub fn replace_event(&mut self, x: usize, event: Event) -> Option<Event> {
         let mut _event: Option<Event> = None;
         if x < self.events.len() {
@@ -157,6 +151,21 @@ impl EventManager {
             self.save_events();
         }
         _event
+    }
+
+    pub fn add_event_from_str(&mut self, string: &str) -> isize {
+        match parse_args(string) {
+            Ok((positional, _keywords)) => {
+                // println!("Positional Arguments: {:?}", positional);
+                // println!("Keyword Arguments: {:?}", keywords);
+                let event = Event::from_args(&positional);
+                self.add_event(event)
+            }
+            Err(e) => {
+                println!("Error: {}", e);
+                -1
+            }
+        }
     }
 }
 

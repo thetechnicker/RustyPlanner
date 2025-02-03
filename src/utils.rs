@@ -106,6 +106,7 @@ pub fn parse_duration(s: &str) -> Result<Duration, String> {
     Ok(Duration::hours(hours) + Duration::minutes(minutes))
 }
 
+#[allow(dead_code)]
 pub fn parse_args(input: &str) -> Result<(Vec<String>, HashMap<String, String>), String> {
     let args: Vec<&str> = input.split(',').collect();
     let mut positional_args = Vec::new();
