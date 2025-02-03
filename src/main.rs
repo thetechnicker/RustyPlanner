@@ -7,6 +7,7 @@ use std::fs;
 use std::io::{self, Write};
 use std::process::Command;
 use std::sync::{Arc, Mutex};
+use utils::parse_stupid_recursive;
 use utils::{clear_screen, get_path};
 
 fn main() {
@@ -128,6 +129,12 @@ fn command_mode(event_manager: &Arc<Mutex<EventManager>>, commands: &[String]) {
 // #[allow(unused_mut)]
 fn parse_commands(command: &str, event_manager: &Arc<Mutex<EventManager>>) {
     match command {
+        _ if command.starts_with("stupid") => {
+            let input = command.strip_prefix("stupid ").unwrap_or(command);
+            for part in parse_stupid_recursive(input, 10) {
+                println!("\t{}", part);
+            }
+        }
         _ if command.starts_with("add") => {
             let input = command.strip_prefix("add ").unwrap_or(command);
             match input {
@@ -179,11 +186,11 @@ fn parse_commands(command: &str, event_manager: &Arc<Mutex<EventManager>>) {
     }
 }
 
-fn add_attendance_loop(input: &str, event_manager: &Mutex<EventManager>) {
+fn add_attendance_loop(_input: &str, _event_manager: &Mutex<EventManager>) {
     todo!()
 }
 
-fn add_notification_loop(input: &str, event_manager: &Mutex<EventManager>) {
+fn add_notification_loop(_input: &str, _event_manager: &Mutex<EventManager>) {
     todo!()
 }
 

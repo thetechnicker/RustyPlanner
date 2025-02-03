@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use chrono::{DateTime, Duration, Local, Weekday};
 use serde::{Deserialize, Serialize};
 
@@ -196,6 +198,70 @@ impl Event {
         }
 
         event
+    }
+
+    pub fn parse_kwargs(kwargs: HashMap<String, String>) -> Self {
+        let mut event = Event::default();
+
+        // Extract values from the HashMap
+        if let Some(event_id) = kwargs.get("event_id") {
+            event.event_id = event_id.clone();
+        }
+        if let Some(title) = kwargs.get("title") {
+            event.title = title.clone();
+        }
+        if let Some(description) = kwargs.get("description") {
+            event.description = description.clone();
+        }
+        if let Some(start_time_str) = kwargs.get("start_time") {
+            if let Ok(start_time) = DateTime::parse_from_rfc3339(start_time_str) {
+                event.start_time = start_time.with_timezone(&Local);
+            }
+        }
+        if let Some(end_time_str) = kwargs.get("end_time") {
+            if let Ok(end_time) = DateTime::parse_from_rfc3339(end_time_str) {
+                event.end_time = end_time.with_timezone(&Local);
+            }
+        }
+        if let Some(location) = kwargs.get("location") {
+            event.location = location.clone();
+        }
+        if let Some(is_recurring_str) = kwargs.get("is_recurring") {
+            event.is_recurring = is_recurring_str.parse().unwrap_or(false);
+        }
+
+        event
+    }
+
+    pub fn update_from_kwargs(mut self, kwargs: HashMap<String, String>) -> Self {
+        // Update values from the HashMap
+        if let Some(event_id) = kwargs.get("event_id") {
+            self.event_id = event_id.clone();
+        }
+        if let Some(title) = kwargs.get("title") {
+            self.title = title.clone();
+        }
+        if let Some(description) = kwargs.get("description") {
+            self.description = description.clone();
+        }
+        if let Some(start_time_str) = kwargs.get("start_time") {
+            if let Ok(start_time) = DateTime::parse_from_rfc3339(start_time_str) {
+                self.start_time = start_time.with_timezone(&Local);
+            }
+        }
+        if let Some(end_time_str) = kwargs.get("end_time") {
+            if let Ok(end_time) = DateTime::parse_from_rfc3339(end_time_str) {
+                self.end_time = end_time.with_timezone(&Local);
+            }
+        }
+        if let Some(location) = kwargs.get("location") {
+            self.location = location.clone();
+        }
+        if let Some(is_recurring_str) = kwargs.get("is_recurring") {
+            self.is_recurring = is_recurring_str.parse().unwrap_or(self.is_recurring);
+        }
+
+        self
     }
 
     fn set_event_id(mut self, event_id: String) -> Event {

@@ -155,10 +155,10 @@ impl EventManager {
 
     pub fn add_event_from_str(&mut self, string: &str) -> isize {
         match parse_args(string) {
-            Ok((positional, _keywords)) => {
+            Ok((args, kwargs)) => {
                 // println!("Positional Arguments: {:?}", positional);
                 // println!("Keyword Arguments: {:?}", keywords);
-                let event = Event::from_args(&positional);
+                let event = Event::from_args(&args).update_from_kwargs(kwargs);
                 self.add_event(event)
             }
             Err(e) => {

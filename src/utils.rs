@@ -135,3 +135,86 @@ pub fn parse_args(input: &str) -> Result<(Vec<String>, HashMap<String, String>),
 
     Ok((positional_args, keyword_args))
 }
+
+#[allow(dead_code)]
+pub fn parse_stupid_args(input: &str) -> Vec<String> {
+    let mut is_list = false;
+    let mut current_list: String = String::new();
+    let mut current_element: String = String::new();
+    let mut elements: Vec<String> = Vec::new();
+    let mut depth: i64 = 0;
+
+    for c in input.chars() {
+        if is_list {
+            if c == '[' {
+                depth += 1;
+            }
+            if c == ']' {
+                depth -= 1;
+                if depth == 0 {
+                    // Close the list and add it to the current element
+                    current_element.push_str(&current_list);
+                    current_list.clear(); // Clear the list for future use
+                    is_list = false; // Reset the list flag
+                    continue;
+                }
+            }
+            current_list.push(c);
+        } else {
+            if c == '[' {
+                depth += 1;
+                is_list = true; // Start a new list
+                continue;
+            }
+            if c == ',' {
+                // Push the current element to the elements vector
+                if !current_element.is_empty() {
+                    elements.push(current_element.trim().to_string());
+                    current_element.clear(); // Clear for the next element
+                }
+                continue;
+            }
+            current_element.push(c); // Add character to the current element
+        }
+    }
+
+    // Handle any remaining current element
+    if is_list {
+        current_element.push_str(&current_list);
+    }
+    if !current_element.is_empty() {
+        elements.push(current_element.trim().to_string());
+    }
+
+    elements
+}
+
+#[allow(dead_code)]
+pub fn parse_stupid_recursive(input: &str, max_depth: usize) -> Vec<String> {
+    parse_stupid_recursive_helper(parse_stupid_args(input), 0, max_depth)
+}
+
+fn parse_stupid_recursive_helper(
+    parts: Vec<String>,
+    current_depth: usize,
+    max_depth: usize,
+) -> Vec<String> {
+    let mut all_parts: Vec<String> = Vec::new();
+
+    if current_depth > max_depth {
+        return parts; // Stop recursion if the current depth exceeds max depth
+    }
+
+    for part in parts {
+        // Print the current part with indentation based on the current depth
+        // println!("{:indent$}{}", "", part, indent = current_depth * 4); // 4 spaces per depth
+
+        // Parse sub-parts and call the function recursively
+        all_parts.append(&mut parse_stupid_recursive_helper(
+            parse_stupid_args(&part),
+            current_depth + 1,
+            max_depth,
+        ));
+    }
+    all_parts
+}
