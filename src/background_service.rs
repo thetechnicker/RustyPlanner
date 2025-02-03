@@ -85,15 +85,8 @@ pub fn main_loop() -> Result<(), Error> {
 
             if event.is_alarm(time) && !event.has_notified {
                 println!("Time to notify the user!");
-                let event_datetime = event.get_event_datetime();
-                let message = format!(
-                    "Event: {}\nDescription: {}\nLocation {}\nDate: {}\nTime: {}",
-                    event.name,
-                    event.description.as_ref().unwrap_or(&String::from("")),
-                    event.location.as_ref().unwrap_or(&String::from("")),
-                    event_datetime.date(),
-                    event_datetime.time()
-                );
+                // let event_datetime = event.get_event_datetime();
+                let message = format!("{}", event);
                 send_notification(&event.name, &message);
                 event.has_notified = true;
                 has_to_save = true;

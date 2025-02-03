@@ -1,6 +1,6 @@
 use std::cmp::Ordering;
 
-use crate::utils::{duration_to_string, is_valid_date, is_valid_time, parse_duration};
+use crate::utils::{date_from_str, duration_to_string, parse_duration, time_from_str};
 use chrono::{Datelike, Duration, Local, NaiveDate, NaiveDateTime, NaiveTime, Weekday};
 use serde::{Deserialize, Serialize};
 
@@ -21,6 +21,15 @@ fn parse_weekday(value: &str) -> Option<Weekday> {
 pub struct RepeatingWeekDay {
     pub weekday: Weekday,
     pub time: NaiveTime,
+}
+
+impl Default for RepeatingWeekDay {
+    fn default() -> Self {
+        Self {
+            weekday: Weekday::Mon,
+            time: Default::default(),
+        }
+    }
 }
 
 impl PartialEq<NaiveDate> for RepeatingWeekDay {
@@ -84,33 +93,28 @@ impl PartialOrd<NaiveDateTime> for RepeatingWeekDay {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone, Default)]
 pub enum EventType {
-    RepeatingHourly,
-    RepeatingDaily,
-    RepeatingWeekly,
-    RepeatingMonthly,
-    RepeatingYearly,
-    Repeating,
     #[default]
     SingleTime,
+    Repeating,
+    RepeatingDaily(u32),
+    RepeatingWeekly(u32),
+    RepeatingMonthly(u32),
+    RepeatingYearly(u32),
 }
 
 impl std::fmt::Display for EventType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.pad(match *self {
-            EventType::SingleTime => "One Time",
-            EventType::Repeating => "Repeating",
-            EventType::RepeatingWeekly => "Weekly Repeating",
-            EventType::RepeatingDaily => "Dayly Repeating",
-            EventType::RepeatingYearly => "Yearly Repeating",
-            EventType::RepeatingMonthly => "Monthly Repeating",
-            EventType::RepeatingHourly => "Hourly Repeating",
-        })
+        let result = match *self {
+            EventType::SingleTime => "One Time".to_string(),
+            EventType::Repeating => "Repeating".to_string(),
+            EventType::RepeatingWeekly(x) => format!("Repeats every {} week(s)", x),
+            EventType::RepeatingDaily(x) => format!("Repeats every {} day(s)", x),
+            EventType::RepeatingYearly(x) => format!("Repeats every {} year(s)", x),
+            EventType::RepeatingMonthly(x) => format!("Repeats every {} month(s)", x),
+        };
+        f.pad(&result)
     }
 }
-
-// pub struct  RepeatingDay {
-//     pub
-// }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone, Default)]
 pub struct Event {
@@ -129,7 +133,10 @@ impl std::fmt::Display for Event {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let result = match self.event_type {
             EventType::Repeating => {
-                let repeating_weekday = self.repeating_day.as_ref().unwrap();
+                let repeating_weekday = self
+                    .repeating_day
+                    .as_ref()
+                    .map_or(RepeatingWeekDay::default(), |r| r.clone());
                 format!(
                     "Repeating Event {}:\n Weekday: {}\n Time: {}\n Description: {}\n Location: {}",
                     self.name,
@@ -158,41 +165,37 @@ impl std::fmt::Display for Event {
                     self.location.as_ref().map_or("", |v| v)
                 )
             }
-            EventType::RepeatingHourly => {
+            EventType::RepeatingDaily(_x) => {
                 format!(
-                    "Repeating Hourly Event: {}\nDescription: {}\nLocation: {}\n",
+                    "{} Event: {}\nDescription: {}\nLocation: {}\n",
+                    self.event_type,
                     self.name,
                     self.description.as_ref().map_or("", |v| v),
                     self.location.as_ref().map_or("", |v| v)
                 )
             }
-            EventType::RepeatingDaily => {
+            EventType::RepeatingWeekly(_x) => {
                 format!(
-                    "Repeating Daily Event: {}\nDescription: {}\nLocation: {}\n",
+                    "{} Event: {}\nDescription: {}\nLocation: {}\n",
+                    self.event_type,
                     self.name,
                     self.description.as_ref().map_or("", |v| v),
                     self.location.as_ref().map_or("", |v| v)
                 )
             }
-            EventType::RepeatingWeekly => {
+            EventType::RepeatingMonthly(_x) => {
                 format!(
-                    "Repeating Weekly Event: {}\nDescription: {}\nLocation: {}\n",
+                    "{} Event: {}\nDescription: {}\nLocation: {}\n",
+                    self.event_type,
                     self.name,
                     self.description.as_ref().map_or("", |v| v),
                     self.location.as_ref().map_or("", |v| v)
                 )
             }
-            EventType::RepeatingMonthly => {
+            EventType::RepeatingYearly(_x) => {
                 format!(
-                    "Repeating Monthly Event: {}\nDescription: {}\nLocation: {}\n",
-                    self.name,
-                    self.description.as_ref().map_or("", |v| v),
-                    self.location.as_ref().map_or("", |v| v)
-                )
-            }
-            EventType::RepeatingYearly => {
-                format!(
-                    "Repeating Yearly Event: {}\nDescription: {}\nLocation: {}\n",
+                    "{} Event: {}\nDescription: {}\nLocation: {}\n",
+                    self.event_type,
                     self.name,
                     self.description.as_ref().map_or("", |v| v),
                     self.location.as_ref().map_or("", |v| v)
@@ -275,39 +278,37 @@ impl Event {
                     unreachable!("this should never happen");
                 }
             }
-            EventType::RepeatingHourly => todo!(),
-            EventType::RepeatingDaily => todo!(),
-            EventType::RepeatingWeekly => todo!(),
-            EventType::RepeatingMonthly => todo!(),
-            EventType::RepeatingYearly => todo!(), // _ => unreachable!("what did u doo"),
+            EventType::RepeatingDaily(_x) => todo!(),
+            EventType::RepeatingWeekly(_x) => todo!(),
+            EventType::RepeatingMonthly(_x) => todo!(),
+            EventType::RepeatingYearly(_x) => todo!(),
         }
     }
 
-    #[allow(dead_code)]
-    pub fn get_event_datetime(&mut self) -> NaiveDateTime {
-        match self.event_type {
-            EventType::SingleTime => {
-                if let (Some(date), Some(time)) = (self.date, self.time) {
-                    date.and_time(time)
-                } else {
-                    unreachable!("this should never happen");
-                }
-            }
-            EventType::Repeating => {
-                if let Some(ref repeating_day) = self.repeating_day {
-                    next_weekday(Local::now().naive_local().date(), repeating_day.weekday)
-                        .and_time(repeating_day.time)
-                } else {
-                    unreachable!("this should never happen");
-                }
-            }
-            EventType::RepeatingHourly => todo!(),
-            EventType::RepeatingDaily => todo!(),
-            EventType::RepeatingWeekly => todo!(),
-            EventType::RepeatingMonthly => todo!(),
-            EventType::RepeatingYearly => todo!(), // _ => unreachable!("will not be needed"),
-        }
-    }
+    // #[allow(dead_code)]
+    // pub fn get_event_datetime(&mut self) -> NaiveDateTime {
+    //     match self.event_type {
+    //         EventType::SingleTime => {
+    //             if let (Some(date), Some(time)) = (self.date, self.time) {
+    //                 date.and_time(time)
+    //             } else {
+    //                 unreachable!("this should never happen");
+    //             }
+    //         }
+    //         EventType::Repeating => {
+    //             if let Some(ref repeating_day) = self.repeating_day {
+    //                 next_weekday(Local::now().naive_local().date(), repeating_day.weekday)
+    //                     .and_time(repeating_day.time)
+    //             } else {
+    //                 unreachable!("this should never happen");
+    //             }
+    //         }
+    //         EventType::RepeatingDaily => todo!(),
+    //         EventType::RepeatingWeekly => todo!(),
+    //         EventType::RepeatingMonthly => todo!(),
+    //         EventType::RepeatingYearly => todo!(), // _ => unreachable!("will not be needed"),
+    //     }
+    // }
 
     pub fn new(
         name: String,
@@ -379,16 +380,16 @@ impl Event {
                 (_, "name") | (1, "") => name = value.to_owned(),
 
                 (_, "date") | (2, "") if event_type == EventType::SingleTime => {
-                    date = is_valid_date(value)
+                    date = date_from_str(value)
                 }
 
                 (_, "weekday") | (2, "") if event_type == EventType::Repeating => {
                     weekday = parse_weekday(value)
                 }
 
-                (_, "time") => time = is_valid_time(value),
+                (_, "time") => time = time_from_str(value),
                 // if event_type == EventType::SINGLETIME
-                (3, "") => time = is_valid_time(value),
+                (3, "") => time = time_from_str(value),
                 // (3, "") if event_type == EventType::REPEATING => time = is_valid_time(value),
                 (_, "description") | (4, "") => description = Some(value.to_owned()),
                 (_, "location") | (5, "") => location = Some(value.to_owned()),
@@ -415,111 +416,3 @@ impl Event {
         )
     }
 }
-
-// #[allow(dead_code)]
-// #[derive(Debug, PartialEq, Eq, Clone)]
-// enum ParseMode {
-//     Desc,
-//     Loc,
-//     AlarmTime,
-//     None,
-// }
-
-// #[allow(dead_code)]
-// pub fn event_from_cmd(input: &str) -> Option<Event> {
-//     let command = input.strip_prefix("add ").unwrap_or("");
-//     let parts: Vec<&str> = command.split_whitespace().collect();
-
-//     let mut name: String = String::from("");
-//     let mut time: Option<NaiveTime> = None;
-//     let mut date: Option<NaiveDate> = None;
-//     let mut location: String = String::from("");
-//     let mut description: String = String::from("");
-//     let mut alarm_time: Option<Duration> = None;
-
-//     let mut is_name = true;
-//     let mut mode = ParseMode::None;
-//     for part in parts {
-//         if date.is_none() {
-//             if let Some(_date) = is_valid_date(part) {
-//                 date = Some(_date);
-//                 is_name = false;
-//                 continue;
-//             }
-//         }
-//         if time.is_none() {
-//             if let Some(_time) = is_valid_time(part) {
-//                 time = Some(_time);
-//                 is_name = false;
-//                 continue;
-//             }
-//         }
-//         if is_name {
-//             name += part;
-//             name += " ";
-//         } else {
-//             match part {
-//                 "-d" => {
-//                     mode = ParseMode::Desc;
-//                     continue;
-//                 }
-//                 "-l" => {
-//                     mode = ParseMode::Loc;
-//                     continue;
-//                 }
-//                 "-a" => {
-//                     mode = ParseMode::AlarmTime;
-//                     continue;
-//                 }
-//                 _ => {
-//                     //mode=ParseMode::None;
-//                 }
-//             }
-
-//             match mode {
-//                 ParseMode::Desc => {
-//                     description += part;
-//                     description += " ";
-//                 }
-//                 ParseMode::Loc => {
-//                     location += part;
-//                     location += " ";
-//                 }
-//                 ParseMode::AlarmTime => {
-//                     if alarm_time.is_none() {
-//                         alarm_time = Some(parse_duration(part).expect("Failed Parsing"));
-//                     }
-//                 }
-//                 ParseMode::None => {
-//                     //println!("idk where to put {}", part);
-//                 }
-//             }
-//         }
-//     }
-
-//     if date.is_none() {
-//         eprintln!("Error: Date must be provided.");
-//         return None;
-//     }
-//     if time.is_none() {
-//         eprintln!("Error: Time must be provided.");
-//         return None;
-//     }
-//     if is_name {
-//         eprintln!("Error: Name not Defined");
-//         return None;
-//     }
-
-//     name = name.trim().to_owned();
-
-//     let event = Event::new_single_time_event(
-//         name,
-//         time.unwrap(),
-//         date.unwrap(),
-//         false,
-//         alarm_time,
-//         Some(description.trim().to_owned()),
-//         Some(location.trim().to_owned()),
-//     );
-//     Some(event)
-// }

@@ -10,7 +10,7 @@ use std::io::{self, Write};
 use std::process::Command;
 use std::sync::{Arc, Mutex};
 use utils::{
-    clear_screen, duration_to_string, get_path, is_valid_date, is_valid_time, parse_duration,
+    clear_screen, date_from_str, duration_to_string, get_path, parse_duration, time_from_str,
 };
 
 fn main() {
@@ -279,7 +279,7 @@ fn edit_event(event: &mut Event) {
             .as_ref()
             .map_or("".to_string(), |t| t.to_string()),
     );
-    event.time = is_valid_time(&new_time).or_else(|| event.time.clone());
+    event.time = time_from_str(&new_time).or_else(|| event.time.clone());
 
     // Ask for the new date and validate it
     let new_date = ask_user(
@@ -289,7 +289,7 @@ fn edit_event(event: &mut Event) {
             .as_ref()
             .map_or("".to_string(), |d| d.to_string()),
     );
-    event.date = is_valid_date(&new_date).or_else(|| event.date.clone());
+    event.date = date_from_str(&new_date).or_else(|| event.date.clone());
 
     // Ask for the new alarm time and parse it
     let new_alarm_time = ask_user(
