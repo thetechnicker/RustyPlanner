@@ -8,7 +8,7 @@ use std::fs;
 use std::io::{self, Write};
 use std::process::Command;
 use std::sync::{Arc, Mutex};
-use utils::{clear_screen, get_path};
+use utils::{clear_screen, get_path, parse_args};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -129,24 +129,21 @@ fn command_mode(event_manager: &Arc<Mutex<EventManager>>, commands: &[String]) {
 #[allow(unused_mut)]
 fn parse_commands(command: &str, event_manager: &Arc<Mutex<EventManager>>) {
     match command {
-        // _ if command.starts_with("old_add") => {
-        //     match event_from_cmd(command) {
-        //         Some(event) => {
-        //             //println!("Event: {:?}", event);
-        //             let x = event_manager.lock().unwrap().add_event(event);
-        //             match event_manager.lock().unwrap().get_event(x as usize) {
-        //                 Some(event) => println!("Event '{}' saved at index {}", event.name, x),
-        //                 _ => eprintln!("error"),
-        //             };
-
-        //             //event_manager.lock().unwrap().save_events();
-        //         }
-        //         None => {
-        //             eprintln!("error")
-        //         }
-        //     }
-        // }
         _ if command.starts_with("add") => {
+            let mut input = command.strip_prefix("add ").unwrap_or(command);
+            match parse_args(input) {
+                Ok((positional, keywords)) => {
+                    println!("Positional Arguments: {:?}", positional);
+                    println!("Keyword Arguments: {:?}", keywords);
+                }
+                Err(e) => {
+                    println!("Error: {}", e);
+                }
+            }
+            // let mut event = Event::default().set_title(input.to_string());
+            // println!("{}", event)
+        }
+        _ if command.starts_with("add_old") => {
             // let mut event = Event::from_str(command);
             let mut event = Event::default();
             println!("{}", event);
