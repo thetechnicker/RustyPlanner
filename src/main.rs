@@ -1,7 +1,6 @@
 mod events;
 mod utils;
 
-use events::event::Event;
 use events::event_manager::{EventManager, EventManagerMode};
 use std::env;
 use std::fs;
@@ -134,67 +133,17 @@ fn parse_commands(command: &str, event_manager: &Arc<Mutex<EventManager>>) {
             match input {
                 _ if input.starts_with("event") => {
                     let input = command.strip_prefix("event ").unwrap_or(command);
-                    let index = event_manager.lock().unwrap().add_event_from_str(&input);
-                    if index < 0 {
-                        eprintln!("Error when trying to add the Event");
-                        return;
-                    }
-                    println!(
-                        "{}",
-                        event_manager
-                            .lock()
-                            .unwrap()
-                            .get_event(index as usize)
-                            .unwrap()
-                    );
+                    add_event_loop(input, event_manager);
+                }
+                _ if input.starts_with("notification") => {
+                    let input = command.strip_prefix("notification ").unwrap_or(command);
+                    add_notification_loop(input, event_manager);
+                }
+                _ if input.starts_with("attendance") => {
+                    let input = command.strip_prefix("attendance ").unwrap_or(command);
+                    add_attendance_loop(input, event_manager);
                 }
                 _ => print_add_help(),
-            }
-        }
-        _ if command.starts_with("add_old") => {
-            // let mut event = Event::from_str(command);
-            let event = Event::default();
-            println!("{}", event);
-            let mut attempts = 0; // Counter for invalid attempts
-
-            loop {
-                println!("What would you like to do with the event?");
-                println!("1. Keep");
-                println!("2. Discard");
-                println!("3. Edit");
-
-                let mut choice = String::new();
-                print!("Enter your choice (1/2/3): ");
-                io::stdout().flush().unwrap(); // Ensure the prompt is printed before reading input
-                io::stdin().read_line(&mut choice).unwrap();
-
-                match choice.trim() {
-                    "1" => {
-                        // Keep the event
-                        event_manager.lock().unwrap().add_event(event);
-                        break; // Exit the loop
-                    }
-                    "2" => {
-                        // Discard the event
-                        println!("Event has been discarded.");
-                        break; // Exit the loop
-                    }
-                    "3" => {
-                        // Edit the event
-                        // edit_event(&mut event);
-                        println!("Event has been edited. Here is the updated event:");
-                        println!("{}", event);
-                        attempts = 0; // Reset attempts after a successful edit
-                    }
-                    _ => {
-                        attempts += 1; // Increment the invalid attempts counter
-                        println!("Invalid choice. Please enter 1, 2, or 3.");
-                        if attempts >= 10 {
-                            println!("Too many invalid attempts. The event will be discarded.");
-                            break; // Exit the loop after 10 invalid attempts
-                        }
-                    }
-                }
             }
         }
         _ if command.starts_with("help") => {
@@ -226,6 +175,65 @@ fn parse_commands(command: &str, event_manager: &Arc<Mutex<EventManager>>) {
         _ => {
             eprintln!("Unknown command: {}", command);
             print_help(); // Suggest help for valid commands
+        }
+    }
+}
+
+fn add_attendance_loop(input: &str, event_manager: &Mutex<EventManager>) {
+    todo!()
+}
+
+fn add_notification_loop(input: &str, event_manager: &Mutex<EventManager>) {
+    todo!()
+}
+
+fn add_event_loop(input: &str, event_manager: &Arc<Mutex<EventManager>>) {
+    let index = event_manager.lock().unwrap().add_event_from_str(&input);
+    if index < 0 {
+        eprintln!("Error when trying to add the Event");
+        return;
+    }
+    println!(
+        "{}",
+        event_manager
+            .lock()
+            .unwrap()
+            .get_event(index as usize)
+            .unwrap()
+    );
+    let mut attempts = 0;
+    loop {
+        println!("What would you like to do with the event?");
+        println!("1. Keep");
+        println!("2. Discard");
+        println!("3. Edit");
+
+        let mut choice = String::new();
+        print!("Enter your choice (1/2/3): ");
+        io::stdout().flush().unwrap(); // Ensure the prompt is printed before reading input
+        io::stdin().read_line(&mut choice).unwrap();
+
+        match choice.trim() {
+            "1" => {
+                break; // Exit the loop
+            }
+            "2" => {
+                // Discard the event
+                println!("Event has been discarded.");
+                break; // Exit the loop
+            }
+            "3" => {
+                // attempts = 0; // Reset attempts after a successful edit
+                todo!();
+            }
+            _ => {
+                attempts += 1; // Increment the invalid attempts counter
+                println!("Invalid choice. Please enter 1, 2, or 3.");
+                if attempts >= 10 {
+                    println!("Too many invalid attempts. The event will be discarded.");
+                    break; // Exit the loop after 10 invalid attempts
+                }
+            }
         }
     }
 }
@@ -266,19 +274,26 @@ fn print_help() {
 
 fn print_add_help() {
     let help_message = r#"
-Usage: event_manager add [OPTIONS]
+Usage: add [event|notification|attendance] [OPTIONS]
 
-Add a new event to the calendar.
+event:
+    event_id =      [EVENT_ID]
+    title =         [TITLE]
+    description =   [DESCRIPTION]
+    start_time =    [START_TIME] (format: RFC3339)
+    end_time =      [END_TIME] (format: RFC3339)
+    location =      [LOCATION]
+    is_recurring =  [true|false]
+    recurrence =    [RECURRING_DETAILS] (if applicable)
 
-Options:
+notification:
+    event_id =      [EVENT_ID]
+    time_before =   [TIME_BEFORE] (e.g., "1 hour before")
 
+attendance:
+    event_id =      [EVENT_ID]
+    attendees =     [ATTENDEE_LIST] (comma-separated list of attendee names)
 
-Examples:
-    event_manager add mode: one-time, name: "Doctor Appointment", date: "2023-10-15", time: "14:30", description: "Annual check-up", location: "Clinic", alarm time: "30m"
-    
-    event_manager add mode: recurring, name: "Weekly Meeting", weekday: "Monday", time: "09:00", description: "Team sync-up", location: "Office", alarm time: "10m"
-
-Note: If no mode is specified, the default is one-time. If no date is provided for a one-time event, the event will not be created. For recurring events, a weekday must be specified.
 "#;
 
     println!("{}", help_message);
