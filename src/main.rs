@@ -2,7 +2,7 @@ mod events;
 mod utils;
 
 use chrono::Duration;
-use events::event::{event_from_cmd, Event};
+use events::event::Event;
 use events::event_manager::{EventManager, EventManagerMode};
 use std::env;
 use std::fs;
@@ -131,23 +131,23 @@ fn command_mode(event_manager: &Arc<Mutex<EventManager>>, commands: &[String]) {
 
 fn parse_commands(command: &str, event_manager: &Arc<Mutex<EventManager>>) {
     match command {
-        _ if command.starts_with("old_add") => {
-            match event_from_cmd(command) {
-                Some(event) => {
-                    //println!("Event: {:?}", event);
-                    let x = event_manager.lock().unwrap().add_event(event);
-                    match event_manager.lock().unwrap().get_event(x as usize) {
-                        Some(event) => println!("Event '{}' saved at index {}", event.name, x),
-                        _ => eprintln!("error"),
-                    };
+        // _ if command.starts_with("old_add") => {
+        //     match event_from_cmd(command) {
+        //         Some(event) => {
+        //             //println!("Event: {:?}", event);
+        //             let x = event_manager.lock().unwrap().add_event(event);
+        //             match event_manager.lock().unwrap().get_event(x as usize) {
+        //                 Some(event) => println!("Event '{}' saved at index {}", event.name, x),
+        //                 _ => eprintln!("error"),
+        //             };
 
-                    //event_manager.lock().unwrap().save_events();
-                }
-                None => {
-                    eprintln!("error")
-                }
-            }
-        }
+        //             //event_manager.lock().unwrap().save_events();
+        //         }
+        //         None => {
+        //             eprintln!("error")
+        //         }
+        //     }
+        // }
         _ if command.starts_with("add") => {
             let mut event = Event::from_str(command);
             println!("{}", event);
