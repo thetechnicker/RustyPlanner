@@ -5,7 +5,6 @@ mod utils;
 use events::event_manager::{EventManager, EventManagerMode};
 // use notify_rust::Notification;
 use daemonize::Daemonize;
-use notification::send_notification;
 use std::fs;
 use std::fs::File;
 use std::sync::{Arc, Mutex};
@@ -50,6 +49,7 @@ fn main() -> Result<(), Error> {
     }
 }
 
+#[allow(unused_mut)]
 pub fn main_loop() -> Result<(), Error> {
     let term = Arc::new(AtomicBool::new(false));
 
@@ -83,14 +83,14 @@ pub fn main_loop() -> Result<(), Error> {
             println!("\t{index}: {event:?}");
             // is it time to notify the user?
 
-            if event.is_alarm(time) && !event.has_notified {
-                println!("Time to notify the user!");
-                // let event_datetime = event.get_event_datetime();
-                let message = format!("{}", event);
-                send_notification(&event.name, &message);
-                event.has_notified = true;
-                has_to_save = true;
-            }
+            // if event.is_alarm(time) && !event.has_notified {
+            //     println!("Time to notify the user!");
+            //     // let event_datetime = event.get_event_datetime();
+            //     let message = format!("{}", event);
+            //     send_notification(&event.name, &message);
+            //     event.has_notified = true;
+            //     has_to_save = true;
+            // }
         }
         if has_to_save {
             event_manager.lock().unwrap().save_events();

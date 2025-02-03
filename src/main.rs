@@ -1,7 +1,6 @@
 mod events;
 mod utils;
 
-use chrono::Duration;
 use events::event::Event;
 use events::event_manager::{EventManager, EventManagerMode};
 use std::env;
@@ -9,9 +8,7 @@ use std::fs;
 use std::io::{self, Write};
 use std::process::Command;
 use std::sync::{Arc, Mutex};
-use utils::{
-    clear_screen, date_from_str, duration_to_string, get_path, parse_duration, time_from_str,
-};
+use utils::{clear_screen, get_path};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -129,6 +126,7 @@ fn command_mode(event_manager: &Arc<Mutex<EventManager>>, commands: &[String]) {
     parse_commands(&command, event_manager);
 }
 
+#[allow(unused_mut)]
 fn parse_commands(command: &str, event_manager: &Arc<Mutex<EventManager>>) {
     match command {
         // _ if command.starts_with("old_add") => {
@@ -149,7 +147,8 @@ fn parse_commands(command: &str, event_manager: &Arc<Mutex<EventManager>>) {
         //     }
         // }
         _ if command.starts_with("add") => {
-            let mut event = Event::from_str(command);
+            // let mut event = Event::from_str(command);
+            let mut event = Event::default();
             println!("{}", event);
             let mut attempts = 0; // Counter for invalid attempts
 
@@ -177,7 +176,7 @@ fn parse_commands(command: &str, event_manager: &Arc<Mutex<EventManager>>) {
                     }
                     "3" => {
                         // Edit the event
-                        edit_event(&mut event);
+                        // edit_event(&mut event);
                         println!("Event has been edited. Here is the updated event:");
                         println!("{}", event);
                         attempts = 0; // Reset attempts after a successful edit
@@ -193,47 +192,47 @@ fn parse_commands(command: &str, event_manager: &Arc<Mutex<EventManager>>) {
                 }
             }
         }
-        _ if command.starts_with("remove") => {
-            let x: &str = command.strip_prefix("remove ").unwrap_or("");
-            match x.trim().parse::<usize>() {
-                Ok(index) => {
-                    let e = event_manager.lock().unwrap().remove_event(index);
-                    match e {
-                        Some(event) => {
-                            println!("Event '{}' removed from index {}", event.name, index);
-                        }
-                        None => {
-                            eprintln!("Error: Event not found at index {}", index);
-                        }
-                    }
-                }
-                Err(_) => {
-                    eprintln!("Invalid index: {}", x);
-                }
-            }
-        }
-        _ if command.starts_with("edit") => {
-            let x: &str = command.strip_prefix("edit ").unwrap_or("");
-            match x.trim().parse::<usize>() {
-                Ok(index) => {
-                    match event_manager.lock().unwrap().get_event_mut(index) {
-                        Some(event) => {
-                            println!("Event '{}' edited at index {}", event.name, index);
-                            edit_event(event);
-                        }
-                        _ => eprintln!("error"),
-                    };
-                    println!(
-                        "Event '{:?}' edited at index {}",
-                        event_manager.lock().unwrap().get_event(index),
-                        index
-                    );
-                }
-                Err(_) => {
-                    eprintln!("Invalid index: {}", x);
-                }
-            }
-        }
+        // _ if command.starts_with("remove") => {
+        //     let x: &str = command.strip_prefix("remove ").unwrap_or("");
+        //     match x.trim().parse::<usize>() {
+        //         Ok(index) => {
+        //             let e = event_manager.lock().unwrap().remove_event(index);
+        //             match e {
+        //                 Some(event) => {
+        //                     println!("Event '{}' removed from index {}", event.name, index);
+        //                 }
+        //                 None => {
+        //                     eprintln!("Error: Event not found at index {}", index);
+        //                 }
+        //             }
+        //         }
+        //         Err(_) => {
+        //             eprintln!("Invalid index: {}", x);
+        //         }
+        //     }
+        // }
+        // _ if command.starts_with("edit") => {
+        //     let x: &str = command.strip_prefix("edit ").unwrap_or("");
+        //     match x.trim().parse::<usize>() {
+        //         Ok(index) => {
+        //             match event_manager.lock().unwrap().get_event_mut(index) {
+        //                 Some(event) => {
+        //                     println!("Event '{}' edited at index {}", event.name, index);
+        //                     edit_event(event);
+        //                 }
+        //                 _ => eprintln!("error"),
+        //             };
+        //             println!(
+        //                 "Event '{:?}' edited at index {}",
+        //                 event_manager.lock().unwrap().get_event(index),
+        //                 index
+        //             );
+        //         }
+        //         Err(_) => {
+        //             eprintln!("Invalid index: {}", x);
+        //         }
+        //     }
+        // }
         _ if command.starts_with("help") => {
             let command_help = command.strip_prefix("help ").unwrap_or("");
             match command_help {
@@ -267,50 +266,52 @@ fn parse_commands(command: &str, event_manager: &Arc<Mutex<EventManager>>) {
     }
 }
 
-fn edit_event(event: &mut Event) {
-    // Ask the user for the new name
-    event.name = ask_user("Enter the new name", &event.name);
+// fn edit_event(event: &mut Event) {
+//     // Ask the user for the new name
+//     event.name = ask_user("Enter the new name", &event.name);
 
-    // Ask for the new time and validate it
-    let new_time = ask_user(
-        "Enter the new time",
-        &event
-            .time
-            .as_ref()
-            .map_or("".to_string(), |t| t.to_string()),
-    );
-    event.time = time_from_str(&new_time).or_else(|| event.time.clone());
+//     // Ask for the new time and validate it
+//     let new_time = ask_user(
+//         "Enter the new time",
+//         &event
+//             .time
+//             .as_ref()
+//             .map_or("".to_string(), |t| t.to_string()),
+//     );
+//     event.time = time_from_str(&new_time).or_else(|| event.time.clone());
 
-    // Ask for the new date and validate it
-    let new_date = ask_user(
-        "Enter the new date",
-        &event
-            .date
-            .as_ref()
-            .map_or("".to_string(), |d| d.to_string()),
-    );
-    event.date = date_from_str(&new_date).or_else(|| event.date.clone());
+//     // Ask for the new date and validate it
+//     let new_date = ask_user(
+//         "Enter the new date",
+//         &event
+//             .date
+//             .as_ref()
+//             .map_or("".to_string(), |d| d.to_string()),
+//     );
+//     event.date = date_from_str(&new_date).or_else(|| event.date.clone());
 
-    // Ask for the new alarm time and parse it
-    let new_alarm_time = ask_user(
-        "Enter the new alarm time",
-        &duration_to_string(&event.alarm_time.unwrap_or(Duration::zero())).as_str(),
-    );
-    event.alarm_time = parse_duration(&new_alarm_time).ok();
+//     // Ask for the new alarm time and parse it
+//     let new_alarm_time = ask_user(
+//         "Enter the new alarm time",
+//         &duration_to_string(&event.alarm_time.unwrap_or(Duration::zero())).as_str(),
+//     );
+//     event.alarm_time = parse_duration(&new_alarm_time).ok();
 
-    // Ask for the new description
-    event.description = Some(ask_user(
-        "Enter the new description",
-        event.description.as_ref().unwrap_or(&"".to_string()),
-    ));
+//     // Ask for the new description
+//     event.description = Some(ask_user(
+//         "Enter the new description",
+//         event.description.as_ref().unwrap_or(&"".to_string()),
+//     ));
 
-    // Ask for the new location
-    event.location = Some(ask_user(
-        "Enter the new location",
-        event.location.as_ref().unwrap_or(&"".to_string()),
-    ));
-}
+//     // Ask for the new location
+//     event.location = Some(ask_user(
+//         "Enter the new location",
+//         event.location.as_ref().unwrap_or(&"".to_string()),
+//     ));
+// }
 
+#[allow(unused_mut)]
+#[allow(dead_code)]
 fn ask_user(prompt: &str, default: &str) -> String {
     print!("{} [{}]: ", prompt, default);
     io::stdout().flush().unwrap();

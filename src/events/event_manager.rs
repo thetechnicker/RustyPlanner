@@ -52,30 +52,14 @@ impl EventManager {
         event_manager
     }
 
-    #[allow(dead_code)]
-    pub fn list_events(&self) {
-        println!("Events:");
-        for (index, event) in self.events.iter().enumerate() {
-            println!("\t{index}: {event:?}");
-        }
-    }
-
-    pub fn save_events(&self) {
-        //if let EventManagerMode::Active = self.mode {
-        // println!("saved Events");
-        // Convert the vector of events to a JSON string
-        let json_string = serde_json::to_string(&self.events).expect("Failed to convert to JSON");
-
-        // Print the JSON string
-        // println!("{}", json_string);
-        if let Err(e) = fs::write(&self.file_path, json_string) {
-            eprintln!("Failed to save file: {}", e);
-        } else {
-            println!("Events saved successfully.");
-        }
-        /*} else {
-            println!("Cannot save events in Passive mode.");
-        }*/
+    pub fn monitor_file(event_manager: Arc<Mutex<EventManager>>, file_path: PathBuf) {
+        std::thread::spawn(move || {
+            futures::executor::block_on(async {
+                if let Err(e) = async_watch(event_manager, file_path).await {
+                    println!("error: {:?}", e)
+                }
+            });
+        });
     }
 
     pub fn read_events_from_file(&mut self) {
@@ -87,6 +71,24 @@ impl EventManager {
             if let Ok(Some(events)) = serde_json::from_str(&data) {
                 self.events = events;
             }
+        }
+    }
+
+    pub fn save_events(&self) {
+        let json_string = serde_json::to_string(&self.events).expect("Failed to convert to JSON");
+
+        if let Err(e) = fs::write(&self.file_path, json_string) {
+            eprintln!("Failed to save file: {}", e);
+        } else {
+            println!("Events saved successfully.");
+        }
+    }
+
+    #[allow(dead_code)]
+    pub fn list_events(&self) {
+        println!("Events:");
+        for (index, event) in self.events.iter().enumerate() {
+            println!("\t{index}: {event:?}");
         }
     }
 
@@ -111,11 +113,6 @@ impl EventManager {
         Some(&mut self.events[x])
     }
 
-    // #[allow(dead_code)]
-    // pub fn get_event_mut(&mut self, x: usize) -> Option<Event> {
-    //     self.events.get_mut(x)
-    // }
-
     #[allow(dead_code)]
     pub fn iter_events(&self) -> impl Iterator<Item = &Event> {
         self.events.iter()
@@ -124,16 +121,6 @@ impl EventManager {
     #[allow(dead_code)]
     pub fn iter_events_mut(&mut self) -> impl Iterator<Item = &mut Event> {
         self.events.iter_mut()
-    }
-
-    pub fn monitor_file(event_manager: Arc<Mutex<EventManager>>, file_path: PathBuf) {
-        std::thread::spawn(move || {
-            futures::executor::block_on(async {
-                if let Err(e) = async_watch(event_manager, file_path).await {
-                    println!("error: {:?}", e)
-                }
-            });
-        });
     }
 
     #[allow(dead_code)]
@@ -197,7 +184,6 @@ async fn async_watch(event_manager: Arc<Mutex<EventManager>>, path: PathBuf) -> 
         match res {
             Ok(event) => {
                 if event.kind.is_modify() {
-                    //println!("changed: {:?}", event);
                     event_manager.lock().unwrap().read_events_from_file();
                 }
             }
