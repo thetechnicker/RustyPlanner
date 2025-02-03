@@ -150,8 +150,48 @@ fn parse_commands(command: &str, event_manager: &Arc<Mutex<EventManager>>) {
         }
         _ if command.starts_with("add") => {
             let mut event = Event::from_str(command);
-            edit_event(&mut event);
-            println!("{:?}", event);
+            println!("{}", event);
+            let mut attempts = 0; // Counter for invalid attempts
+
+            loop {
+                println!("What would you like to do with the event?");
+                println!("1. Keep");
+                println!("2. Discard");
+                println!("3. Edit");
+
+                let mut choice = String::new();
+                print!("Enter your choice (1/2/3): ");
+                io::stdout().flush().unwrap(); // Ensure the prompt is printed before reading input
+                io::stdin().read_line(&mut choice).unwrap();
+
+                match choice.trim() {
+                    "1" => {
+                        // Keep the event
+                        event_manager.lock().unwrap().add_event(event);
+                        break; // Exit the loop
+                    }
+                    "2" => {
+                        // Discard the event
+                        println!("Event has been discarded.");
+                        break; // Exit the loop
+                    }
+                    "3" => {
+                        // Edit the event
+                        edit_event(&mut event);
+                        println!("Event has been edited. Here is the updated event:");
+                        println!("{}", event);
+                        attempts = 0; // Reset attempts after a successful edit
+                    }
+                    _ => {
+                        attempts += 1; // Increment the invalid attempts counter
+                        println!("Invalid choice. Please enter 1, 2, or 3.");
+                        if attempts >= 10 {
+                            println!("Too many invalid attempts. The event will be discarded.");
+                            break; // Exit the loop after 10 invalid attempts
+                        }
+                    }
+                }
+            }
         }
         _ if command.starts_with("remove") => {
             let x: &str = command.strip_prefix("remove ").unwrap_or("");
@@ -194,6 +234,20 @@ fn parse_commands(command: &str, event_manager: &Arc<Mutex<EventManager>>) {
                 }
             }
         }
+        _ if command.starts_with("help") => {
+            let command_help = command.strip_prefix("help ").unwrap_or("");
+            match command_help {
+                "add" => print_add_help(), // Assuming print_help() provides help for the "add" command
+                "save" => print_save_help(),
+                "remove" => print_remove_help(),
+                "edit" => print_edit_help(),
+                "cls" => print_cls_help(),
+                "list" => print_list_help(),
+                "clear" => print_clear_help(),
+                "" => print_help(), // Default help message
+                _ => print_help(),  // Fallback for unrecognized commands
+            }
+        }
         "save" => {
             event_manager.lock().unwrap().save_events();
         }
@@ -202,9 +256,6 @@ fn parse_commands(command: &str, event_manager: &Arc<Mutex<EventManager>>) {
         }
         "clear" => {
             event_manager.lock().unwrap().clear();
-        }
-        "help" => {
-            print_help();
         }
         "cls" => {
             clear_screen();
@@ -243,7 +294,7 @@ fn edit_event(event: &mut Event) {
     // Ask for the new alarm time and parse it
     let new_alarm_time = ask_user(
         "Enter the new alarm time",
-        &duration_to_string(event.alarm_time.unwrap_or(Duration::zero())).as_str(),
+        &duration_to_string(&event.alarm_time.unwrap_or(Duration::zero())).as_str(),
     );
     event.alarm_time = parse_duration(&new_alarm_time).ok();
 
@@ -279,16 +330,89 @@ fn ask_user(prompt: &str, default: &str) -> String {
 
 fn print_help() {
     println!("Available commands:");
-    println!("  add <name> <time> <date> [-d <description>] [-l <location>] [-a <time to notify before event>]  - Add a new event");
-    println!("  save                                                                                            - Save events to file");
-    println!("  remove <index>                                                                                  - Remove an event by index");
-    println!("  edit <index>                                                                                    - Edit an event by index");
-    println!("  cls                                                                                             - Clear the screen");
-    println!("  list                                                                                            - List all events");
-    println!("  clear                                                                                           - Clear all events");
-    println!("  help                                                                                            - Show this help message");
-    println!("  exit                                                                                            - Exit the application");
+    println!("  add            - Add a new event");
+    println!("  save           - Save events to file");
+    println!("  remove <index> - Remove an event by index");
+    println!("  edit <index>   - Edit an event by index");
+    println!("  cls            - Clear the screen");
+    println!("  list           - List all events");
+    println!("  clear          - Clear all events");
+    println!("  help           - Show this help message");
+    println!("  exit           - Exit the application");
     println!();
     println!("Use the 'add' command to create a new event with optional parameters for description, location, and notification time.");
     println!("For more details on each command, refer to the documentation.");
+}
+
+fn print_add_help() {
+    let help_message = r#"
+Usage: event_manager add [OPTIONS]
+
+Add a new event to the calendar.
+
+Options:
+    mode: <MODE>,           Specify the event type. Valid options are:
+                            one-time, recurring.
+
+    name: <NAME>,           The name of the event. Default is "New Event".
+
+    date: <DATE>,           The date of the event in YYYY-MM-DD format.
+                            Required for one-time events.
+
+    weekday: <WEEKDAY>,     The day of the week for recurring events.
+                            Valid options are: Monday, Tuesday, ..., Sunday.
+
+    time: <TIME>,           The time of the event in HH:MM format.
+                            Required for both one-time and recurring events.
+
+    description: <DESC>,    A brief description of the event.
+
+    location: <LOCATION>,    The location where the event will take place.
+
+    alarm time: <DURATION>, Set an alarm for the event. Specify duration in
+                            hours, minutes, or seconds (e.g., "10m", "1h30m").
+
+Examples:
+    event_manager add mode: one-time, name: "Doctor Appointment", date: "2023-10-15", time: "14:30", description: "Annual check-up", location: "Clinic", alarm time: "30m"
+    
+    event_manager add mode: recurring, name: "Weekly Meeting", weekday: "Monday", time: "09:00", description: "Team sync-up", location: "Office", alarm time: "10m"
+
+Note: If no mode is specified, the default is one-time. If no date is provided for a one-time event, the event will not be created. For recurring events, a weekday must be specified.
+"#;
+
+    println!("{}", help_message);
+}
+
+fn print_save_help() {
+    println!("  save           - Save events to file");
+    println!("                  Usage: save <filename>");
+    println!("                  Description: Saves all current events to the specified file.");
+}
+
+fn print_remove_help() {
+    println!("  remove <index> - Remove an event by index");
+    println!("                  Usage: remove <index>");
+    println!("                  Description: Removes the event at the specified index from the list of events.");
+}
+
+fn print_edit_help() {
+    println!("  edit <index>   - Edit an event by index");
+    println!("                  Usage: edit <index> [options]");
+    println!("                  Description: Edits the event at the specified index. Options can include");
+    println!("                  mode, name, date, time, description, location, and alarm time.");
+}
+
+fn print_cls_help() {
+    println!("  cls            - Clear the screen");
+    println!("                  Description: Clears the console screen for better visibility.");
+}
+
+fn print_list_help() {
+    println!("  list           - List all events");
+    println!("                  Description: Displays all current events in the calendar.");
+}
+
+fn print_clear_help() {
+    println!("  clear          - Clear all events");
+    println!("                  Description: Removes all events from the calendar.");
 }

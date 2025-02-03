@@ -69,12 +69,14 @@ cargo run
 ## TODO List
 
 ### Basic Functions
+
 - [x] Add event
 - [x] Remove event
 - [x] Edit event
 - [x] Clear all events
 
 ### UI/UX
+
 - [x] Event Managing
   - [x] Interactive mode
   - [x] CLI mode
@@ -83,11 +85,13 @@ cargo run
 - [ ] TUI Application
 
 ### Background Service
+
 - [x] Basic Notification
 - [x] Daemonized
 - [ ] Customizable Notifications
 
 ### Event Features
+
 - [x] Simple events
 - [ ] Repeating events
 - [ ] Event categorization
@@ -95,9 +99,9 @@ cargo run
 - [ ] Export/Import of events
 
 ### Maintenance
+
 - [ ] Write documentation
 - [ ] Write tests
-
 
 ## Contributing
 

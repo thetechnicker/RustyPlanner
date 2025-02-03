@@ -1,6 +1,6 @@
 use std::cmp::Ordering;
 
-use crate::utils::{is_valid_date, is_valid_time, parse_duration};
+use crate::utils::{duration_to_string, is_valid_date, is_valid_time, parse_duration};
 use chrono::{Datelike, Duration, Local, NaiveDate, NaiveDateTime, NaiveTime, Weekday};
 use serde::{Deserialize, Serialize};
 
@@ -122,6 +122,45 @@ pub struct Event {
     pub description: Option<String>,
     pub location: Option<String>,
     pub alarm_time: Option<Duration>,
+}
+
+impl std::fmt::Display for Event {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let result = match self.event_type {
+            EventType::REPEATING => {
+                let repeating_weekday = self.repeating_day.as_ref().unwrap();
+                format!(
+                    "Repeating Event {}:\n Weekday: {}\n Time: {}\n Description: {}\n Location: {}",
+                    self.name,
+                    repeating_weekday.weekday,
+                    repeating_weekday.time,
+                    self.description.as_ref().map_or("", |v| v),
+                    self.location.as_ref().map_or("", |v| v)
+                )
+            }
+            EventType::SINGLETIME => {
+                format!(
+                    "One Time Event: {}\n{{\n    Date: {}\n    Time: {}\n    Alarm Time: {}\n    Description: {}\n    Location: {}\n}}",
+                    self.name,
+                    self.date
+                        .as_ref()
+                        .map_or("No date provided".to_string(), |d| d
+                            .format("%Y-%m-%d")
+                            .to_string()),
+                    self.time
+                        .as_ref()
+                        .map_or("No Time provided".to_string(), |t| t
+                            .format("%H:%M")
+                            .to_string()),
+                    self.alarm_time.as_ref().map_or("".to_string(), |a| duration_to_string(a)),
+                    self.description.as_ref().map_or("", |v| v),
+                    self.location.as_ref().map_or("", |v| v)
+                )
+            }
+        };
+
+        f.pad(&result)
+    }
 }
 
 // impl PartialEq<NaiveDateTime> for Event {
@@ -270,7 +309,7 @@ impl Event {
 
         for (index, part) in parts.iter().enumerate() {
             let part = (*part).to_string();
-            let a: Vec<&str> = part.split_terminator(":").collect();
+            let a: Vec<&str> = part.split_terminator(": ").collect();
             let trimmed: Vec<&str> = a.iter().map(|s| s.trim()).collect();
 
             let mut key = *(trimmed.get(0).unwrap_or(&""));
@@ -279,7 +318,7 @@ impl Event {
                 value = key;
                 key = ""
             }
-            println!("key: {}, value: {}", key, value);
+            // println!("key: {}, value: {}", key, value);
 
             match (index, key.to_lowercase().as_str()) {
                 (_, "mode") | (0, "") => {
@@ -298,11 +337,7 @@ impl Event {
 
                 (_, "name") | (1, "") => name = value.to_owned(),
 
-                (_, "time") => time = is_valid_time(value),
-                (2, "") if event_type == EventType::SINGLETIME => time = is_valid_time(value),
-                (3, "") if event_type == EventType::REPEATING => time = is_valid_time(value),
-
-                (_, "date") | (3, "") if event_type == EventType::SINGLETIME => {
+                (_, "date") | (2, "") if event_type == EventType::SINGLETIME => {
                     date = is_valid_date(value)
                 }
 
@@ -310,6 +345,10 @@ impl Event {
                     weekday = parse_weekday(value)
                 }
 
+                (_, "time") => time = is_valid_time(value),
+                // if event_type == EventType::SINGLETIME
+                (3, "") => time = is_valid_time(value),
+                // (3, "") if event_type == EventType::REPEATING => time = is_valid_time(value),
                 (_, "description") | (4, "") => description = Some(value.to_owned()),
                 (_, "location") | (5, "") => location = Some(value.to_owned()),
                 (_, "alarm time") | (6, "") => alarm_time = parse_duration(value).ok(),
