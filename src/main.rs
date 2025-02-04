@@ -1,14 +1,16 @@
 mod events;
-mod utils;
+mod miscs;
 
+use miscs::arg_parsing::parse_data;
+// use arg_parsing::parse_kwargs;
 use events::event_manager::{EventManager, EventManagerMode};
 use std::env;
 use std::fs;
 use std::io::{self, Write};
 use std::process::Command;
 use std::sync::{Arc, Mutex};
-use utils::parse_stupid_recursive;
-use utils::{clear_screen, get_path};
+// use utils::parse_stupid_recursive;
+use miscs::utils::{clear_screen, get_path};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -131,9 +133,8 @@ fn parse_commands(command: &str, event_manager: &Arc<Mutex<EventManager>>) {
     match command {
         _ if command.starts_with("stupid") => {
             let input = command.strip_prefix("stupid ").unwrap_or(command);
-            for part in parse_stupid_recursive(input, 10) {
-                println!("\t{}", part);
-            }
+            let data = parse_data(input, 0);
+            data.print(0);
         }
         _ if command.starts_with("add") => {
             let input = command.strip_prefix("add ").unwrap_or(command);

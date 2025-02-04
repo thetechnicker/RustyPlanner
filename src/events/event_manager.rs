@@ -6,7 +6,7 @@ use std::fs;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
-use crate::utils::parse_args;
+use crate::miscs::arg_parsing::parse_args;
 
 use super::event::Event;
 
