@@ -39,7 +39,6 @@ pub struct Notification {
     pub method: NotificationMethod, // Method of notification (e.g., email, SMS, push)
 }
 
-// #[allow(dead_code)]
 impl Notification {
     pub fn from_args(args: &[String]) -> Self {
         let notify_before = args[0].parse().expect("Invalid notify_before");
