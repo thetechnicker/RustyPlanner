@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use chrono::{DateTime, Duration, Local, Weekday};
 use serde::{Deserialize, Serialize};
 
@@ -116,7 +114,6 @@ pub struct Attendee {
     pub email: String,       // Email of the attendee
 }
 
-//#[allow(dead_code)]
 // impl Attendee {
 //     pub fn from_args(args: &[String]) -> Self {
 //         let attendee_id = args[0].clone();
@@ -172,103 +169,7 @@ impl Default for Event {
     }
 }
 
-//#[allow(dead_code)]
 impl Event {
-    pub fn from_args(args: &[String]) -> Self {
-        let len = args.len();
-
-        // Initialize a new Event instance with default values
-        let mut event = Event::default();
-
-        // Set the event ID, title, description, and start time
-        if let Some(id) = args.get(0) {
-            event = event.set_event_id(id.clone());
-        }
-        if let Some(title) = args.get(1) {
-            event = event.set_title(title.clone());
-        }
-        if let Some(description) = args.get(2) {
-            event = event.set_description(description.clone());
-        }
-        if let Some(start_time_str) = args.get(3) {
-            if let Ok(start_time) = DateTime::parse_from_rfc3339(start_time_str) {
-                event = event.set_start_time(start_time.with_timezone(&Local));
-            }
-        }
-
-        // Determine if the event is recurring
-        if len > 4 {
-            let is_recurring = args[4].parse().expect("Invalid is_recurring");
-            event = event.set_is_recurring(is_recurring);
-        }
-
-        event
-    }
-
-    pub fn parse_kwargs(kwargs: HashMap<String, String>) -> Self {
-        let mut event = Event::default();
-
-        // Extract values from the HashMap
-        if let Some(event_id) = kwargs.get("event_id") {
-            event.event_id = event_id.clone();
-        }
-        if let Some(title) = kwargs.get("title") {
-            event.title = title.clone();
-        }
-        if let Some(description) = kwargs.get("description") {
-            event.description = description.clone();
-        }
-        if let Some(start_time_str) = kwargs.get("start_time") {
-            if let Ok(start_time) = DateTime::parse_from_rfc3339(start_time_str) {
-                event.start_time = start_time.with_timezone(&Local);
-            }
-        }
-        if let Some(end_time_str) = kwargs.get("end_time") {
-            if let Ok(end_time) = DateTime::parse_from_rfc3339(end_time_str) {
-                event.end_time = end_time.with_timezone(&Local);
-            }
-        }
-        if let Some(location) = kwargs.get("location") {
-            event.location = location.clone();
-        }
-        if let Some(is_recurring_str) = kwargs.get("is_recurring") {
-            event.is_recurring = is_recurring_str.parse().unwrap_or(false);
-        }
-
-        event
-    }
-
-    pub fn update_from_kwargs(mut self, kwargs: HashMap<String, String>) -> Self {
-        // Update values from the HashMap
-        if let Some(event_id) = kwargs.get("event_id") {
-            self.event_id = event_id.clone();
-        }
-        if let Some(title) = kwargs.get("title") {
-            self.title = title.clone();
-        }
-        if let Some(description) = kwargs.get("description") {
-            self.description = description.clone();
-        }
-        if let Some(start_time_str) = kwargs.get("start_time") {
-            if let Ok(start_time) = DateTime::parse_from_rfc3339(start_time_str) {
-                self.start_time = start_time.with_timezone(&Local);
-            }
-        }
-        if let Some(end_time_str) = kwargs.get("end_time") {
-            if let Ok(end_time) = DateTime::parse_from_rfc3339(end_time_str) {
-                self.end_time = end_time.with_timezone(&Local);
-            }
-        }
-        if let Some(location) = kwargs.get("location") {
-            self.location = location.clone();
-        }
-        if let Some(is_recurring_str) = kwargs.get("is_recurring") {
-            self.is_recurring = is_recurring_str.parse().unwrap_or(self.is_recurring);
-        }
-
-        self
-    }
-
     fn set_event_id(mut self, event_id: String) -> Event {
         self.event_id = event_id;
         self

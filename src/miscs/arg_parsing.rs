@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 #[derive(Debug)]
-//#[allow(dead_code)]
+
 pub enum Data {
     None,
     String(String),
@@ -17,7 +17,6 @@ impl std::fmt::Display for Data {
     }
 }
 
-//#[allow(dead_code)]
 impl Data {
     fn to_string(&self, depth: u64) -> String {
         let mut output = String::new();
@@ -99,7 +98,6 @@ impl Data {
     }
 }
 
-//#[allow(dead_code)]
 pub fn parse_data(input: &str, x: u64) -> Data {
     if x == 0 {
         println!("{}", input);
@@ -265,34 +263,4 @@ pub fn parse_data(input: &str, x: u64) -> Data {
         }
     }
     data
-}
-
-//#[allow(dead_code)]
-pub fn parse_args(input: &str) -> Result<(Vec<String>, HashMap<String, String>), String> {
-    let args: Vec<&str> = input.split(',').collect();
-    let mut positional_args = Vec::new();
-    let mut keyword_args = HashMap::new();
-    let mut found_keyword = false; // Flag to track if a keyword argument has been found
-
-    for arg in args {
-        let arg = arg.trim(); // Remove any leading/trailing whitespace
-        if arg.contains('=') {
-            // If we find a keyword argument, set the flag
-            found_keyword = true;
-            let parts: Vec<&str> = arg.splitn(2, '=').collect();
-            if parts.len() != 2 {
-                return Err(format!("Invalid keyword argument: {}", arg));
-            }
-            let key = parts[0].trim().to_string();
-            let value = parts[1].trim().to_string();
-            keyword_args.insert(key, value);
-        } else {
-            if found_keyword {
-                return Err("Positional arguments cannot follow keyword arguments.".to_string());
-            }
-            positional_args.push(arg.to_string());
-        }
-    }
-
-    Ok((positional_args, keyword_args))
 }

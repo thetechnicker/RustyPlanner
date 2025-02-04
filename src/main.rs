@@ -259,7 +259,6 @@ fn add_event_loop(input: &str, event_manager: &Arc<Mutex<EventManager>>) {
     }
 }
 
-//#[allow(dead_code)]
 fn ask_user(prompt: &str, default: &str) -> String {
     print!("{} [{}]: ", prompt, default);
     io::stdout().flush().unwrap();

@@ -25,7 +25,6 @@ pub struct EventManager {
     mode: EventManagerMode,
 }
 
-//#[allow(dead_code)]
 impl EventManager {
     pub fn new(
         file_path: PathBuf,
