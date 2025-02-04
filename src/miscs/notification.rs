@@ -1,7 +1,7 @@
 use notify_rust::Notification;
 use std::process::Command;
 
-#[allow(dead_code)]
+//#[allow(dead_code)]
 pub fn send_notification(title: &str, message: &str) {
     if is_wsl() {
         println!("Sending WSL notification");

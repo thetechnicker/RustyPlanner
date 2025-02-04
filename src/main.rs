@@ -1,6 +1,12 @@
 mod events;
 mod miscs;
 
+use chrono::DateTime;
+use chrono::Local;
+use events::event::Attendee;
+use events::event::Event;
+use events::event::Notification;
+use events::event::NotificationMethod;
 use miscs::arg_parsing::parse_data;
 // use arg_parsing::parse_kwargs;
 use events::event_manager::{EventManager, EventManagerMode};
@@ -227,12 +233,19 @@ fn add_event_loop(input: &str, event_manager: &Arc<Mutex<EventManager>>) {
             }
             "2" => {
                 // Discard the event
+                event_manager.lock().unwrap().remove_event(index as usize);
                 println!("Event has been discarded.");
                 break; // Exit the loop
             }
             "3" => {
-                // attempts = 0; // Reset attempts after a successful edit
-                todo!();
+                update_event(
+                    event_manager
+                        .lock()
+                        .unwrap()
+                        .get_event_mut(index as usize)
+                        .unwrap(),
+                );
+                attempts = 0; // Reset attempts after a successful edit
             }
             _ => {
                 attempts += 1; // Increment the invalid attempts counter
@@ -246,7 +259,7 @@ fn add_event_loop(input: &str, event_manager: &Arc<Mutex<EventManager>>) {
     }
 }
 
-#[allow(dead_code)]
+//#[allow(dead_code)]
 fn ask_user(prompt: &str, default: &str) -> String {
     print!("{} [{}]: ", prompt, default);
     io::stdout().flush().unwrap();
@@ -339,4 +352,189 @@ fn print_list_help() {
 fn print_clear_help() {
     println!("  clear          - Clear all events");
     println!("                  Description: Removes all events from the calendar.");
+}
+
+fn update_event(event: &mut Event) {
+    // Update title
+    let new_title = ask_user("Enter new title", &event.title);
+    event.update_title(new_title);
+
+    // Update description
+    let new_description = ask_user("Enter new description", &event.description);
+    event.update_description(new_description);
+
+    // Update location
+    let new_location = ask_user("Enter new location", &event.location);
+    event.update_location(new_location);
+
+    // Update start time
+    let new_start_time_str = ask_user(
+        "Enter new start time (RFC3339 format)",
+        &event.start_time.to_rfc3339(),
+    );
+    if let Ok(new_start_time) = DateTime::parse_from_rfc3339(&new_start_time_str) {
+        event.update_start_time(new_start_time.with_timezone(&Local));
+    } else {
+        println!("Invalid start time format. Keeping the original value.");
+    }
+
+    // Update end time
+    let new_end_time_str = ask_user(
+        "Enter new end time (RFC3339 format)",
+        &event.end_time.to_rfc3339(),
+    );
+    if let Ok(new_end_time) = DateTime::parse_from_rfc3339(&new_end_time_str) {
+        event.update_end_time(new_end_time.with_timezone(&Local));
+    } else {
+        println!("Invalid end time format. Keeping the original value.");
+    }
+
+    // Update is_recurring
+    let new_is_recurring_str = ask_user(
+        "Is the event recurring? (true/false)",
+        &event.is_recurring.to_string(),
+    );
+    if let Ok(new_is_recurring) = new_is_recurring_str.parse::<bool>() {
+        event.update_is_recurring(new_is_recurring);
+    } else {
+        println!("Invalid input for is_recurring. Keeping the original value.");
+    }
+
+    // Update attendees
+    loop {
+        let action = ask_user(
+            "Do you want to add, remove, edit an attendee, or done? (add/remove/edit/done)",
+            "done",
+        );
+        match action.as_str() {
+            "add" => {
+                let attendee_id = ask_user("Enter attendee ID", "");
+                let name = ask_user("Enter attendee name", "");
+                let email = ask_user("Enter attendee email", "");
+                let new_attendee = Attendee {
+                    attendee_id,
+                    name,
+                    email,
+                };
+                event.add_attendee(new_attendee);
+            }
+            "remove" => {
+                let index_str = ask_user("Enter index of attendee to remove", "");
+                if let Ok(index) = index_str.parse::<usize>() {
+                    if event.remove_attendee(index).is_none() {
+                        println!("No attendee found at index {}", index);
+                    }
+                } else {
+                    println!("Invalid index. Please enter a number.");
+                }
+            }
+            "edit" => {
+                let index_str = ask_user("Enter index of attendee to edit", "");
+                if let Ok(index) = index_str.parse::<usize>() {
+                    if index < event.attendees.len() {
+                        let attendee_id =
+                            ask_user("Enter new attendee ID", &event.attendees[index].attendee_id);
+                        let name =
+                            ask_user("Enter new attendee name", &event.attendees[index].name);
+                        let email =
+                            ask_user("Enter new attendee email", &event.attendees[index].email);
+                        event.attendees[index] = Attendee {
+                            attendee_id,
+                            name,
+                            email,
+                        };
+                    } else {
+                        println!("No attendee found at index {}", index);
+                    }
+                } else {
+                    println!("Invalid index. Please enter a number.");
+                }
+            }
+            "done" => break,
+            _ => println!("Invalid action. Please enter add, remove, edit, or done."),
+        }
+    }
+
+    // Update notification settings
+    loop {
+        let action = ask_user(
+            "Do you want to add, remove, edit a notification, or done? (add/remove/edit/done)",
+            "done",
+        );
+        match action.as_str() {
+            "add" => {
+                let notify_before_str = ask_user("Enter notify before (in minutes)", "10");
+                let method_str = ask_user("Enter notification method (Email/SMS/Push)", "Email");
+                let method = match method_str.to_lowercase().as_str() {
+                    "email" => NotificationMethod::Email,
+                    "sms" => NotificationMethod::SMS,
+                    "push" => NotificationMethod::Push,
+                    _ => {
+                        println!("Invalid method. Defaulting to Email.");
+                        NotificationMethod::Email
+                    }
+                };
+                let notify_before = notify_before_str.parse::<i64>().unwrap_or(10); // Default to 10 minutes if parsing fails
+                let new_notification = Notification {
+                    notify_before,
+                    method,
+                };
+                event.add_notification(new_notification);
+            }
+            "remove" => {
+                let index_str = ask_user("Enter index of notification to remove", "");
+                if let Ok(index) = index_str.parse::<usize>() {
+                    if event.remove_notification(index).is_none() {
+                        println!("No notification found at index {}", index);
+                    }
+                } else {
+                    println!("Invalid index. Please enter a number.");
+                }
+            }
+            "edit" => {
+                let index_str = ask_user("Enter index of notification to edit", "");
+                if let Ok(index) = index_str.parse::<usize>() {
+                    if index < event.notification_settings.len() {
+                        let notify_before_str = ask_user(
+                            "Enter new notify before (in minutes)",
+                            &event.notification_settings[index].notify_before.to_string(),
+                        );
+                        let method_str = ask_user(
+                            "Enter new notification method (Email/SMS/Push)",
+                            &match event.notification_settings[index].method {
+                                NotificationMethod::Email => "Email",
+                                NotificationMethod::SMS => "SMS",
+                                NotificationMethod::Push => "Push",
+                            }
+                            .to_string(),
+                        );
+
+                        let method = match method_str.to_lowercase().as_str() {
+                            "email" => NotificationMethod::Email,
+                            "sms" => NotificationMethod::SMS,
+                            "push" => NotificationMethod::Push,
+                            _ => {
+                                println!("Invalid method. Keeping the original value.");
+                                event.notification_settings[index].method.clone()
+                            }
+                        };
+
+                        let notify_before = notify_before_str
+                            .parse::<i64>()
+                            .unwrap_or(event.notification_settings[index].notify_before); // Keep original if parsing fails
+                        event.notification_settings[index] = Notification {
+                            notify_before,
+                            method,
+                        };
+                    } else {
+                        println!("No notification found at index {}", index);
+                    }
+                } else {
+                    println!("Invalid index. Please enter a number.");
+                }
+            }
+            "done" => break,
+            _ => println!("Invalid action. Please enter add, remove, edit, or done."),
+        }
+    }
 }

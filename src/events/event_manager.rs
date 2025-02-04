@@ -25,7 +25,7 @@ pub struct EventManager {
     mode: EventManagerMode,
 }
 
-#[allow(dead_code)]
+//#[allow(dead_code)]
 impl EventManager {
     pub fn new(
         file_path: PathBuf,
@@ -120,8 +120,11 @@ impl EventManager {
         self.events.iter_mut()
     }
 
-    pub fn add_event(&mut self, event: Event) -> isize {
+    pub fn add_event(&mut self, mut event: Event) -> isize {
         if EventManagerMode::Active == self.mode {
+            if event.event_id.is_empty() {
+                event.event_id = format!("#{}", self.events.len());
+            }
             self.events.push(event);
             if self.auto_save {
                 self.save_events();
@@ -159,41 +162,14 @@ impl EventManager {
         let event = Event::from_data(data);
         match event {
             Ok(e) => {
-                println!("{}", e);
-                -1
+                // println!("{}", e);
+                self.add_event(e)
             }
-            Err(e) => {
-                eprintln!("{}", e);
+            Err(_e) => {
+                // eprintln!("{}", e);
                 -1
             }
         }
-        // match parse_data(string, 0) {
-        //     crate::miscs::arg_parsing::Data::String(titel) => {
-        //         let event = Event::default().set_title(titel);
-        //         self.add_event(event)
-        //     }
-        //     crate::miscs::arg_parsing::Data::List(_list) => {
-        //         let event = Event::from_data_list(&_list);
-        //         self.add_event(event)
-        //     }
-        //     crate::miscs::arg_parsing::Data::Object(_object) => todo!(),
-        //     d => {
-        //         eprintln!("No or wrong data Provided: {}", d);
-        //         -1
-        //     }
-        // }
-        // match parse_args(string) {
-        //     Ok((args, kwargs)) => {
-        //         // println!("Positional Arguments: {:?}", positional);
-        //         // println!("Keyword Arguments: {:?}", keywords);
-        //         let event = Event::from_args(&args).update_from_kwargs(kwargs);
-        //         self.add_event(event)
-        //     }
-        //     Err(e) => {
-        //         println!("Error: {}", e);
-        //         -1
-        //     }
-        // }
     }
 }
 

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 #[derive(Debug)]
-#[allow(dead_code)]
+//#[allow(dead_code)]
 pub enum Data {
     None,
     String(String),
@@ -17,7 +17,7 @@ impl std::fmt::Display for Data {
     }
 }
 
-#[allow(dead_code)]
+//#[allow(dead_code)]
 impl Data {
     fn to_string(&self, depth: u64) -> String {
         let mut output = String::new();
@@ -99,7 +99,7 @@ impl Data {
     }
 }
 
-#[allow(dead_code)]
+//#[allow(dead_code)]
 pub fn parse_data(input: &str, x: u64) -> Data {
     if x == 0 {
         println!("{}", input);
@@ -267,7 +267,7 @@ pub fn parse_data(input: &str, x: u64) -> Data {
     data
 }
 
-#[allow(dead_code)]
+//#[allow(dead_code)]
 pub fn parse_args(input: &str) -> Result<(Vec<String>, HashMap<String, String>), String> {
     let args: Vec<&str> = input.split(',').collect();
     let mut positional_args = Vec::new();

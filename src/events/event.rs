@@ -41,7 +41,7 @@ pub struct Notification {
     pub method: NotificationMethod, // Method of notification (e.g., email, SMS, push)
 }
 
-#[allow(dead_code)]
+// #[allow(dead_code)]
 impl Notification {
     pub fn from_args(args: &[String]) -> Self {
         let notify_before = args[0].parse().expect("Invalid notify_before");
@@ -116,19 +116,19 @@ pub struct Attendee {
     pub email: String,       // Email of the attendee
 }
 
-#[allow(dead_code)]
-impl Attendee {
-    pub fn from_args(args: &[String]) -> Self {
-        let attendee_id = args[0].clone();
-        let name = args[1].clone();
-        let email = args[2].clone();
-        Attendee {
-            attendee_id,
-            name,
-            email,
-        }
-    }
-}
+//#[allow(dead_code)]
+// impl Attendee {
+//     pub fn from_args(args: &[String]) -> Self {
+//         let attendee_id = args[0].clone();
+//         let name = args[1].clone();
+//         let email = args[2].clone();
+//         Attendee {
+//             attendee_id,
+//             name,
+//             email,
+//         }
+//     }
+// }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Event {
@@ -172,7 +172,7 @@ impl Default for Event {
     }
 }
 
-#[allow(dead_code)]
+//#[allow(dead_code)]
 impl Event {
     pub fn from_args(args: &[String]) -> Self {
         let len = args.len();

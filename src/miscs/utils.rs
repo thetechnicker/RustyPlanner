@@ -35,7 +35,7 @@ pub fn get_path() -> std::option::Option<PathBuf> {
     return data_file_path;
 }
 
-#[allow(dead_code)]
+//#[allow(dead_code)]
 pub fn duration_to_string(duration: &Duration) -> String {
     let seconds = duration.num_seconds();
     let hours = seconds / 3600;
@@ -45,7 +45,7 @@ pub fn duration_to_string(duration: &Duration) -> String {
     format!("{}h{}m", hours, minutes)
 }
 
-#[allow(dead_code)]
+//#[allow(dead_code)]
 pub fn date_from_str(date_str: &str) -> NaiveDate {
     let formats = ["%Y-%m-%d", "%d-%m-%Y", "%d.%m.%Y", "%m/%d/%Y"];
     for format in &formats {
@@ -56,7 +56,7 @@ pub fn date_from_str(date_str: &str) -> NaiveDate {
     Local::now().naive_local().date()
 }
 
-#[allow(dead_code)]
+//#[allow(dead_code)]
 pub fn time_from_str(time_str: &str) -> NaiveTime {
     let formats = ["%H:%M:%S", "%H:%M", "%I:%M %p"];
     for format in &formats {
@@ -67,7 +67,7 @@ pub fn time_from_str(time_str: &str) -> NaiveTime {
     Local::now().naive_local().time()
 }
 
-#[allow(dead_code)]
+//#[allow(dead_code)]
 pub fn clear_screen() {
     // ANSI escape code to clear the screen
     print!("{}[2J", 27 as char);
@@ -77,7 +77,7 @@ pub fn clear_screen() {
     io::stdout().flush().unwrap();
 }
 
-#[allow(dead_code)]
+//#[allow(dead_code)]
 pub fn parse_duration(s: &str) -> Result<Duration, String> {
     let trimmed = s.trim();
     // println!("{}", trimmed);
