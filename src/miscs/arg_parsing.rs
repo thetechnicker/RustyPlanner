@@ -11,8 +11,53 @@ pub enum Data {
     Object(HashMap<String, Data>),
 }
 
+impl std::fmt::Display for Data {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.pad(&self.to_string(0))
+    }
+}
+
 #[allow(dead_code)]
 impl Data {
+    fn to_string(&self, depth: u64) -> String {
+        let mut output = String::new();
+        let indent = "\t".repeat(depth as usize);
+
+        match self {
+            Data::String(s) => {
+                output.push_str(&format!("{}String: '{}'\n", indent, s));
+            }
+            Data::Int(i) => {
+                output.push_str(&format!("{}Int: '{}'\n", indent, i));
+            }
+            Data::Float(f) => {
+                output.push_str(&format!("{}Float: '{}'\n", indent, f));
+            }
+            Data::List(list) => {
+                output.push_str(&format!("{}List:\n", indent));
+                for item in list {
+                    output.push_str(&item.to_string(depth + 1));
+                }
+            }
+            Data::Object(obj) => {
+                output.push_str(&format!("{}Object:\n", indent));
+                for (key, value) in obj {
+                    output.push_str(&format!(
+                        "{}'{}': \n",
+                        "\t".repeat((depth + 1) as usize),
+                        key
+                    ));
+                    output.push_str(&value.to_string(depth + 2));
+                }
+            }
+            Data::None => {
+                output.push_str(&format!("{}Placeholder\n", indent));
+            }
+        }
+
+        output
+    }
+
     pub fn print(&self, depth: u64) {
         match self {
             Data::String(s) => println!("{}String: '{}'", "\t".repeat(depth as usize), s),
@@ -56,7 +101,9 @@ impl Data {
 
 #[allow(dead_code)]
 pub fn parse_data(input: &str, x: u64) -> Data {
-    // println!("{}", x);
+    if x == 0 {
+        println!("{}", input);
+    }
     if x > 100 {
         return Data::from_string(input);
     }
@@ -66,10 +113,10 @@ pub fn parse_data(input: &str, x: u64) -> Data {
     let mut depth = 0;
     let mut current_item = String::new();
     let mut current_key = String::new();
-
+    let mut index = 0;
     for c in input.chars() {
         match c {
-            ':' if depth == 0 => {
+            ':' if depth == 0 && current_key.is_empty() => {
                 is_key = true;
                 // println!("{}", current_item);
                 current_key = current_item.trim().to_string().clone();
@@ -79,14 +126,15 @@ pub fn parse_data(input: &str, x: u64) -> Data {
                 match data {
                     Data::List(mut list) => {
                         let mut _data: Data = Data::None;
-                        if current_item.contains(',')
-                            || current_item.contains(':')
-                            || current_item.contains('[')
-                        {
+                        if current_item.contains(',') || current_item.contains('[') {
                             _data = parse_data(&current_item, x + 1)
                         } else {
                             if is_key {
                                 let mut object: HashMap<String, Data> = HashMap::new();
+                                if current_key.is_empty() {
+                                    current_key = format!("{}", index);
+                                    index += 1;
+                                }
                                 object
                                     .insert(current_key.clone(), Data::from_string(&current_item));
                                 _data = Data::Object(object);
@@ -101,20 +149,22 @@ pub fn parse_data(input: &str, x: u64) -> Data {
                     }
                     Data::Object(mut object) => {
                         let mut _data: Data = Data::None;
-                        if current_item.contains(',')
-                            || current_item.contains(':')
-                            || current_item.contains('[')
-                        {
+                        if current_item.contains(',') || current_item.contains('[') {
                             _data = parse_data(&current_item, x + 1)
                         } else {
-                            if is_key {
-                                let mut object: HashMap<String, Data> = HashMap::new();
-                                object
-                                    .insert(current_key.clone(), Data::from_string(&current_item));
-                                _data = Data::Object(object);
-                            } else {
-                                _data = Data::from_string(&current_item.trim());
-                            }
+                            // if is_key {
+                            //     let mut object: HashMap<String, Data> = HashMap::new();
+                            //     object
+                            //         .insert(current_key.clone(), Data::from_string(&current_item));
+                            //     _data = Data::Object(object);
+                            // } else {
+                            _data = Data::from_string(&current_item.trim());
+                            // }
+                        }
+
+                        if current_key.is_empty() {
+                            current_key = format!("{}", index);
+                            index += 1;
                         }
                         object.insert(current_key.clone(), _data);
                         data = Data::Object(object);
@@ -123,10 +173,7 @@ pub fn parse_data(input: &str, x: u64) -> Data {
                     }
                     Data::None => {
                         let mut _data: Data = Data::None;
-                        if current_item.contains(',')
-                            || current_item.contains(':')
-                            || current_item.contains('[')
-                        {
+                        if current_item.contains(',') || current_item.contains('[') {
                             _data = parse_data(&current_item, x + 1)
                         } else {
                             _data = Data::from_string(&current_item.trim());
@@ -174,13 +221,13 @@ pub fn parse_data(input: &str, x: u64) -> Data {
         if current_item.contains(',') || current_item.contains(':') || current_item.contains('[') {
             _data = parse_data(&current_item, x + 1)
         } else {
-            if is_key {
-                let mut object: HashMap<String, Data> = HashMap::new();
-                object.insert(current_key.clone(), Data::from_string(&current_item));
-                _data = Data::Object(object);
-            } else {
-                _data = Data::from_string(&current_item.trim());
-            }
+            // if is_key {
+            //     let mut object: HashMap<String, Data> = HashMap::new();
+            //     object.insert(current_key.clone(), Data::from_string(&current_item));
+            //     _data = Data::Object(object);
+            // } else {
+            _data = Data::from_string(&current_item.trim());
+            // }
         }
 
         match data {
@@ -203,11 +250,15 @@ pub fn parse_data(input: &str, x: u64) -> Data {
                 data = Data::List(list)
             }
             Data::Object(mut object) => {
+                // _data.print(0);
+                if current_key.is_empty() {
+                    current_key = format!("{}", index);
+                }
                 object.insert(current_key.clone(), _data);
                 data = Data::Object(object);
             }
             _ => {
-                _data.print(0);
+                // _data.print(0);
                 println!("{}, {}, {}", is_key, current_key, current_item);
                 unreachable!()
             }

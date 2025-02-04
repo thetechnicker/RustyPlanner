@@ -3,6 +3,11 @@ use std::collections::HashMap;
 use chrono::{DateTime, Duration, Local, Weekday};
 use serde::{Deserialize, Serialize};
 
+use crate::miscs::{
+    arg_parsing::Data,
+    utils::{date_from_str, parse_duration, time_from_str},
+};
+
 fn parse_weekday(value: &str) -> Option<Weekday> {
     match value.to_lowercase().as_str() {
         "mon" | "monday" => Some(Weekday::Mon),
@@ -160,8 +165,8 @@ impl Default for Event {
             is_recurring: Default::default(),
             recurrence: Default::default(),
             attendees: Default::default(),
-            created_at: Default::default(),
-            updated_at: Default::default(),
+            created_at: Local::now(),
+            updated_at: Local::now(),
             notification_settings: Default::default(),
         }
     }
@@ -384,6 +389,80 @@ impl Event {
             Some(self.notification_settings.remove(index))
         } else {
             None // Return None if the index is out of bounds
+        }
+    }
+
+    pub fn from_data(data: Data) -> Result<Self, String> {
+        match data {
+            Data::Object(fields) => {
+                let mut event = Event::default();
+
+                // Extract fields from the HashMap
+                if let Some(Data::String(event_id)) = fields.get("event_id") {
+                    event.event_id = event_id.clone();
+                }
+                if let Some(Data::String(title)) = fields.get("title") {
+                    event.title = title.clone();
+                }
+                if let Some(Data::String(description)) = fields.get("description") {
+                    event.description = description.clone();
+                }
+
+                let date = if let Some(Data::String(date)) = fields.get("date") {
+                    date_from_str(date)
+                } else {
+                    Local::now().naive_local().date()
+                };
+                let time = if let Some(Data::String(time)) = fields.get("time") {
+                    time_from_str(time)
+                } else {
+                    Local::now().naive_utc().time()
+                };
+                let naive_datetime = date.and_time(time);
+                // println!("{}", naive_datetime.format("%d.%m.%y - %H-%M"));
+
+                event.start_time = DateTime::from_naive_utc_and_offset(
+                    naive_datetime,
+                    Local::now().offset().clone(),
+                );
+                let duration = if let Some(Data::String(duration)) = fields.get("duration") {
+                    match parse_duration(duration) {
+                        Ok(d) => d,
+                        Err(_) => {
+                            println!("duration invalid");
+                            Duration::hours(2)
+                        }
+                    }
+                } else {
+                    Duration::hours(2)
+                };
+
+                event.end_time = event.start_time.clone() + duration;
+
+                if let Some(Data::String(start_time_str)) = fields.get("start_time") {
+                    if let Ok(start_time) = DateTime::parse_from_rfc3339(start_time_str) {
+                        event.start_time = start_time.with_timezone(&Local);
+                    } else {
+                        return Err("Invalid start_time format".to_string());
+                    }
+                }
+                if let Some(Data::String(end_time_str)) = fields.get("end_time") {
+                    if let Ok(end_time) = DateTime::parse_from_rfc3339(end_time_str) {
+                        event.end_time = end_time.with_timezone(&Local);
+                    } else {
+                        return Err("Invalid end_time format".to_string());
+                    }
+                }
+                if let Some(Data::String(location)) = fields.get("location") {
+                    event.location = location.clone();
+                }
+                if let Some(Data::Int(is_recurring)) = fields.get("is_recurring") {
+                    event.is_recurring = *is_recurring != 0; // Assuming 0 is false, 1 is true
+                }
+
+                Ok(event)
+            }
+            _ => Err("Expected an Object variant".to_string()),
         }
     }
 }

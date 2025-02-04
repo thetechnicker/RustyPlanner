@@ -1,4 +1,4 @@
-use chrono::{Duration, NaiveDate, NaiveTime};
+use chrono::{Duration, Local, NaiveDate, NaiveTime};
 #[cfg(not(test))]
 use directories::BaseDirs;
 use regex::Regex;
@@ -46,25 +46,25 @@ pub fn duration_to_string(duration: &Duration) -> String {
 }
 
 #[allow(dead_code)]
-pub fn date_from_str(date_str: &str) -> Option<NaiveDate> {
+pub fn date_from_str(date_str: &str) -> NaiveDate {
     let formats = ["%Y-%m-%d", "%d-%m-%Y", "%d.%m.%Y", "%m/%d/%Y"];
     for format in &formats {
         if let Ok(date) = NaiveDate::parse_from_str(date_str, format) {
-            return Some(date);
+            return date;
         }
     }
-    None
+    Local::now().naive_local().date()
 }
 
 #[allow(dead_code)]
-pub fn time_from_str(time_str: &str) -> Option<NaiveTime> {
+pub fn time_from_str(time_str: &str) -> NaiveTime {
     let formats = ["%H:%M:%S", "%H:%M", "%I:%M %p"];
     for format in &formats {
         if let Ok(time) = NaiveTime::parse_from_str(time_str, format) {
-            return Some(time);
+            return time - Local::now().offset().clone();
         }
     }
-    None
+    Local::now().naive_local().time()
 }
 
 #[allow(dead_code)]
@@ -80,7 +80,7 @@ pub fn clear_screen() {
 #[allow(dead_code)]
 pub fn parse_duration(s: &str) -> Result<Duration, String> {
     let trimmed = s.trim();
-    println!("{}", trimmed);
+    // println!("{}", trimmed);
 
     // Regular expression to match hours and minutes
     let re =

@@ -6,7 +6,7 @@ use std::fs;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
-use crate::miscs::arg_parsing::parse_args;
+use crate::miscs::arg_parsing::parse_data;
 
 use super::event::Event;
 
@@ -154,18 +154,46 @@ impl EventManager {
     }
 
     pub fn add_event_from_str(&mut self, string: &str) -> isize {
-        match parse_args(string) {
-            Ok((args, kwargs)) => {
-                // println!("Positional Arguments: {:?}", positional);
-                // println!("Keyword Arguments: {:?}", keywords);
-                let event = Event::from_args(&args).update_from_kwargs(kwargs);
-                self.add_event(event)
+        let data = parse_data(string, 0);
+        data.print(0);
+        let event = Event::from_data(data);
+        match event {
+            Ok(e) => {
+                println!("{}", e);
+                -1
             }
             Err(e) => {
-                println!("Error: {}", e);
+                eprintln!("{}", e);
                 -1
             }
         }
+        // match parse_data(string, 0) {
+        //     crate::miscs::arg_parsing::Data::String(titel) => {
+        //         let event = Event::default().set_title(titel);
+        //         self.add_event(event)
+        //     }
+        //     crate::miscs::arg_parsing::Data::List(_list) => {
+        //         let event = Event::from_data_list(&_list);
+        //         self.add_event(event)
+        //     }
+        //     crate::miscs::arg_parsing::Data::Object(_object) => todo!(),
+        //     d => {
+        //         eprintln!("No or wrong data Provided: {}", d);
+        //         -1
+        //     }
+        // }
+        // match parse_args(string) {
+        //     Ok((args, kwargs)) => {
+        //         // println!("Positional Arguments: {:?}", positional);
+        //         // println!("Keyword Arguments: {:?}", keywords);
+        //         let event = Event::from_args(&args).update_from_kwargs(kwargs);
+        //         self.add_event(event)
+        //     }
+        //     Err(e) => {
+        //         println!("Error: {}", e);
+        //         -1
+        //     }
+        // }
     }
 }
 

@@ -132,23 +132,23 @@ fn command_mode(event_manager: &Arc<Mutex<EventManager>>, commands: &[String]) {
 fn parse_commands(command: &str, event_manager: &Arc<Mutex<EventManager>>) {
     match command {
         _ if command.starts_with("stupid") => {
-            let input = command.strip_prefix("stupid ").unwrap_or(command);
+            let input = command.strip_prefix("stupid").unwrap_or(command).trim();
             let data = parse_data(input, 0);
             data.print(0);
         }
         _ if command.starts_with("add") => {
-            let input = command.strip_prefix("add ").unwrap_or(command);
+            let input = command.strip_prefix("add").unwrap_or("").trim();
             match input {
                 _ if input.starts_with("event") => {
-                    let input = command.strip_prefix("event ").unwrap_or(command);
-                    add_event_loop(input, event_manager);
+                    let string = input.strip_prefix("event").unwrap_or(command).trim();
+                    add_event_loop(string, event_manager);
                 }
                 _ if input.starts_with("notification") => {
-                    let input = command.strip_prefix("notification ").unwrap_or(command);
+                    let input = input.strip_prefix("notification").unwrap_or(command).trim();
                     add_notification_loop(input, event_manager);
                 }
                 _ if input.starts_with("attendance") => {
-                    let input = command.strip_prefix("attendance ").unwrap_or(command);
+                    let input = input.strip_prefix("attendance").unwrap_or(command).trim();
                     add_attendance_loop(input, event_manager);
                 }
                 _ => print_add_help(),
