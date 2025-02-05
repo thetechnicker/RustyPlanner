@@ -39,18 +39,26 @@ pub struct Notification {
     pub method: NotificationMethod, // Method of notification (e.g., email, SMS, push)
 }
 
+impl Default for Notification {
+    fn default() -> Self {
+        Self {
+            notify_before: Default::default(),
+            method: NotificationMethod::Push,
+        }
+    }
+}
+
 impl Notification {
-    pub fn from_args(args: &[String]) -> Self {
-        let notify_before = args[0].parse().expect("Invalid notify_before");
-        let method = match args[1].as_str() {
-            "Email" => NotificationMethod::Email,
-            "SMS" => NotificationMethod::SMS,
-            "Push" => NotificationMethod::Push,
-            _ => panic!("Invalid notification method"),
-        };
-        Notification {
-            notify_before,
-            method,
+    pub fn from_data(data: Data) -> Result<Self, String> {
+        match data {
+            Data::Object(data_object) => {
+                let mut notification = Self::default();
+                if let Some(Data::String(duration_str)) = data_object.get("k") {
+                    notification.notify_before = duration_str.parse::<i64>().unwrap_or(10);
+                }
+                Ok(notification)
+            }
+            _ => Err("Data must be an Object".to_string()),
         }
     }
 }

@@ -177,6 +177,10 @@ pub fn parse_data(input: &str, x: u64) -> Data {
                             _data = Data::from_string(&current_item.trim());
                         }
                         if is_key {
+                            if current_key.is_empty() {
+                                current_key = format!("{}", index);
+                                index += 1;
+                            }
                             let mut hash_map: HashMap<String, Data> = HashMap::new();
                             hash_map.insert(current_key.clone(), _data);
                             data = Data::Object(hash_map);
@@ -216,7 +220,7 @@ pub fn parse_data(input: &str, x: u64) -> Data {
     // println!("--------------");
     if !current_item.is_empty() {
         let mut _data: Data = Data::None;
-        if current_item.contains(',') || current_item.contains(':') || current_item.contains('[') {
+        if current_item.contains(',') || current_item.contains('[') {
             _data = parse_data(&current_item, x + 1)
         } else {
             // if is_key {
@@ -232,7 +236,7 @@ pub fn parse_data(input: &str, x: u64) -> Data {
             Data::None => {
                 if is_key {
                     if current_key.is_empty() {
-                        current_key = "aödflja".to_string();
+                        current_key = format!("{}", index);
                     }
                     let mut object: HashMap<String, Data> = HashMap::new();
                     object.insert(current_key.clone(), _data);
