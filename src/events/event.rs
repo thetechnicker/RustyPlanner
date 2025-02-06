@@ -153,6 +153,29 @@ pub struct Attendee {
     pub email: String,       // Email of the attendee
 }
 
+impl Attendee {
+    pub fn from_data(data: &Data) -> Result<Self, String> {
+        match data {
+            Data::Object(attendee_data) => {
+                if let Some(Data::String(name)) = attendee_data.get("name") {
+                    if let Some(Data::String(email)) = attendee_data.get("email") {
+                        Ok(Self {
+                            attendee_id: "None".to_string(),
+                            name: name.to_string(),
+                            email: email.to_string(),
+                        })
+                    } else {
+                        Err("Email must be given".to_string())
+                    }
+                } else {
+                    Err("Name must be given".to_string())
+                }
+            }
+            _ => Err("Data must be object".to_string()),
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Event {
     pub event_id: String,                         // Unique identifier for the event
@@ -167,6 +190,7 @@ pub struct Event {
     pub created_at: DateTime<Local>,              // Timestamp when the event was created
     pub updated_at: DateTime<Local>,              // Timestamp when the event was last updated
     pub notification_settings: Vec<Notification>, // Notification settings
+    pub is_all_day: bool,                         // Some comment for astetic reasons
 }
 
 impl std::fmt::Display for Event {
@@ -191,6 +215,7 @@ impl Default for Event {
             created_at: Local::now(),
             updated_at: Local::now(),
             notification_settings: Default::default(),
+            is_all_day: false,
         }
     }
 }
@@ -342,15 +367,20 @@ impl Event {
                 };
                 let time = if let Some(Data::String(time)) = fields.get("time") {
                     time_from_str(time)
+                } else if let Some(Data::String(_)) = fields.get("whole_day") {
+                    event.is_all_day = true;
+                    time_from_str("0:00")
                 } else {
                     Local::now().naive_utc().time()
                 };
                 let naive_datetime = date.and_time(time);
-                // println!("{}", naive_datetime.format("%d.%m.%y - %H-%M"));
 
                 event.start_time =
                     DateTime::from_naive_utc_and_offset(naive_datetime, *Local::now().offset());
-                let duration = if let Some(Data::String(duration)) = fields.get("duration") {
+
+                let duration = if !event.is_all_day {
+                    Duration::days(1)
+                } else if let Some(Data::String(duration)) = fields.get("duration") {
                     match parse_duration(duration) {
                         Ok(d) => d,
                         Err(_) => {
@@ -390,6 +420,14 @@ impl Event {
                     match Recurrence::from_data(data) {
                         Ok(recurrence) => event.recurrence = Some(recurrence),
                         Err(_) => eprintln!("error parsing recurrence"),
+                    }
+                }
+
+                if let Some(Data::List(attendees)) = fields.get("attendees") {
+                    for anttendee_data in attendees {
+                        if let Ok(attendee) = Attendee::from_data(anttendee_data) {
+                            event.attendees.push(attendee);
+                        }
                     }
                 }
 

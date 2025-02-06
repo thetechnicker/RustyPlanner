@@ -234,6 +234,7 @@ fn add_event_loop(input: &str, event_manager: &Arc<Mutex<EventManager>>) {
             "2" => {
                 // Discard the event
                 event_manager.lock().unwrap().remove_event(index as usize);
+                event_manager.lock().unwrap().save_events();
                 println!("Event has been discarded.");
                 break; // Exit the loop
             }

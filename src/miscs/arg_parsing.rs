@@ -96,12 +96,12 @@ impl Data {
     }
 }
 
-pub fn parse_data(mut input: &str, x: u64) -> Data {
-    input = input.trim();
-    input = input.strip_prefix("[").unwrap_or(input);
-    input = input.trim();
-    input = input.strip_suffix("]").unwrap_or(input);
-    input = input.trim();
+pub fn parse_data(input: &str, x: u64) -> Data {
+    //input = input.trim();
+    //input = input.strip_prefix("[").unwrap_or(input);
+    //input = input.trim();
+    //input = input.strip_suffix("]").unwrap_or(input);
+    //input = input.trim();
 
     if x == 0 {
         println!("first call: {}", input);
@@ -130,7 +130,10 @@ pub fn parse_data(mut input: &str, x: u64) -> Data {
                 match data {
                     Data::List(mut list) => {
                         let mut _data: Data = Data::None;
-                        if current_item.contains(',') || current_item.contains('[') {
+                        if current_item.contains(',')
+                            || current_item.contains('[')
+                            || current_item.contains(']')
+                        {
                             _data = parse_data(&current_item, x + 1)
                         } else if is_key {
                             let mut object: HashMap<String, Data> = HashMap::new();
@@ -150,7 +153,10 @@ pub fn parse_data(mut input: &str, x: u64) -> Data {
                     }
                     Data::Object(mut object) => {
                         let mut _data: Data = Data::None;
-                        if current_item.contains(',') || current_item.contains('[') {
+                        if current_item.contains(',')
+                            || current_item.contains('[')
+                            || current_item.contains(']')
+                        {
                             _data = parse_data(&current_item, x + 1)
                         } else {
                             _data = Data::from_string(current_item.trim());
@@ -167,7 +173,10 @@ pub fn parse_data(mut input: &str, x: u64) -> Data {
                     }
                     Data::None => {
                         let mut _data: Data = Data::None;
-                        if current_item.contains(',') || current_item.contains('[') {
+                        if current_item.contains(',')
+                            || current_item.contains('[')
+                            || current_item.contains(']')
+                        {
                             _data = parse_data(&current_item, x + 1)
                         } else {
                             _data = Data::from_string(current_item.trim());
@@ -213,7 +222,7 @@ pub fn parse_data(mut input: &str, x: u64) -> Data {
     }
     if !current_item.is_empty() {
         let mut _data: Data = Data::None;
-        if current_item.contains(',') || current_item.contains('[') {
+        if current_item.contains(',') || current_item.contains('[') || current_item.contains(']') {
             _data = parse_data(&current_item, x + 1)
         } else {
             _data = Data::from_string(current_item.trim());
