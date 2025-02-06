@@ -117,9 +117,11 @@ impl Recurrence {
                             .push(parse_weekday_default(day_name));
                     } else if let Some(Data::List(days)) = _data.get("days") {
                         for day in days {
-                            if let Data::String(day_name) = day { recurrence
-                            .days_of_week
-                            .push(parse_weekday_default(day_name)) }
+                            if let Data::String(day_name) = day {
+                                recurrence
+                                    .days_of_week
+                                    .push(parse_weekday_default(day_name))
+                            }
                         }
                     }
                 }
