@@ -214,7 +214,10 @@ impl Default for Event {
             attendees: Default::default(),
             created_at: Local::now(),
             updated_at: Local::now(),
-            notification_settings: Default::default(),
+            notification_settings: vec![Notification {
+                notify_before: 0,
+                method: NotificationMethod::Push,
+            }],
             is_all_day: false,
         }
     }

@@ -1,14 +1,17 @@
 mod events;
 mod miscs;
 
+use chrono::Duration;
 use daemonize::Daemonize;
+use events::event::NotificationMethod;
 use events::event_manager::{EventManager, EventManagerMode};
+use miscs::notification::send_notification;
 use miscs::utils::get_path;
 use std::fs;
 use std::fs::File;
 use std::sync::{Arc, Mutex};
 use std::thread;
-use std::time::Duration;
+use std::time::Duration as StdDuration;
 use uzers::{get_current_gid, get_current_uid};
 
 use signal_hook::flag;
@@ -70,30 +73,31 @@ pub fn main_loop() -> Result<(), Error> {
     // event_manager.lock().unwrap().read_events_from_file();
 
     while !term.load(Ordering::Relaxed) {
-        let time = chrono::Local::now().naive_local();
+        let now = chrono::Local::now();
         println!(
             "{}: Background service is running...",
-            time.format("%Y-%m-%d %H:%M:%S")
+            now.format("%Y-%m-%d %H:%M:%S")
         );
         // event_manager.lock().unwrap().list_events();
         let mut has_to_save = false;
         for (index, event) in event_manager.lock().unwrap().iter_events_mut().enumerate() {
             println!("\t{index}: {event:?}");
-            // is it time to notify the user?
-
-            // if event.is_alarm(time) && !event.has_notified {
-            //     println!("Time to notify the user!");
-            //     // let event_datetime = event.get_event_datetime();
-            //     let message = format!("{}", event);
-            //     send_notification(&event.name, &message);
-            //     event.has_notified = true;
-            //     has_to_save = true;
-            // }
+            for notification in event.notification_settings.iter() {
+                if event.start_time - Duration::minutes(notification.notify_before) <= now {
+                    match notification.method {
+                        NotificationMethod::Push => {
+                            send_notification(&event.title, &event.description)
+                        }
+                        NotificationMethod::Email => todo!(),
+                        NotificationMethod::Sms => todo!(),
+                    }
+                }
+            }
         }
         if has_to_save {
             event_manager.lock().unwrap().save_events();
         }
-        thread::sleep(Duration::from_millis(250));
+        thread::sleep(StdDuration::from_millis(250));
     }
 
     println!("Received SIGTERM kill signal. Exiting...");
