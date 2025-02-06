@@ -26,7 +26,7 @@ fn main() {
     let event_manager: Arc<Mutex<EventManager>>;
 
     if let Some(dfp) = &data_file_path {
-        event_manager = EventManager::new(dfp.clone(), true, EventManagerMode::Active);
+        event_manager = EventManager::new(dfp.clone(), false, EventManagerMode::Active);
     } else {
         eprintln!("error cant create Config file");
         return;
@@ -231,12 +231,12 @@ fn add_event_loop(input: &str, event_manager: &Arc<Mutex<EventManager>>) {
 
         match choice.trim() {
             "1" => {
+                event_manager.lock().unwrap().save_events();
                 break; // Exit the loop
             }
             "2" => {
                 // Discard the event
                 event_manager.lock().unwrap().remove_event(index as usize);
-                event_manager.lock().unwrap().save_events();
                 println!("Event has been discarded.");
                 break; // Exit the loop
             }
@@ -480,6 +480,7 @@ fn update_event(event: &mut Event) {
                 let new_notification = Notification {
                     notify_before,
                     method,
+                    has_notified: false,
                 };
                 event.add_notification(new_notification);
             }
@@ -526,6 +527,7 @@ fn update_event(event: &mut Event) {
                         event.notification_settings[index] = Notification {
                             notify_before,
                             method,
+                            has_notified: false,
                         };
                     } else {
                         println!("No notification found at index {}", index);

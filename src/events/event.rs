@@ -37,6 +37,7 @@ pub enum NotificationMethod {
 pub struct Notification {
     pub notify_before: i64, // Time in minutes before the event to send the notification
     pub method: NotificationMethod, // Method of notification (e.g., email, SMS, push)
+    pub has_notified: bool,
 }
 
 impl Default for Notification {
@@ -44,6 +45,7 @@ impl Default for Notification {
         Self {
             notify_before: Default::default(),
             method: NotificationMethod::Push,
+            has_notified: false,
         }
     }
 }
@@ -191,7 +193,6 @@ pub struct Event {
     pub updated_at: DateTime<Local>,              // Timestamp when the event was last updated
     pub notification_settings: Vec<Notification>, // Notification settings
     pub is_all_day: bool,                         // Some comment for astetic reasons
-    pub has_notified: bool,                       // more astetic
 }
 
 impl std::fmt::Display for Event {
@@ -215,12 +216,8 @@ impl Default for Event {
             attendees: Default::default(),
             created_at: Local::now(),
             updated_at: Local::now(),
-            notification_settings: vec![Notification {
-                notify_before: 0,
-                method: NotificationMethod::Push,
-            }],
+            notification_settings: Default::default(),
             is_all_day: false,
-            has_notified: false,
         }
     }
 }
@@ -437,10 +434,7 @@ impl Event {
                 }
 
                 if event.notification_settings.is_empty() {
-                    event.notification_settings.push(Notification {
-                        notify_before: 0,
-                        method: NotificationMethod::Push,
-                    })
+                    event.notification_settings.push(Notification::default());
                 }
                 Ok(event)
             }
