@@ -29,7 +29,7 @@ fn parse_weekday_default(value: &str) -> Weekday {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum NotificationMethod {
     Email,
-    SMS,
+    Sms,
     Push,
 }
 

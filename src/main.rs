@@ -466,7 +466,7 @@ fn update_event(event: &mut Event) {
                 let method_str = ask_user("Enter notification method (Email/SMS/Push)", "Email");
                 let method = match method_str.to_lowercase().as_str() {
                     "email" => NotificationMethod::Email,
-                    "sms" => NotificationMethod::SMS,
+                    "sms" => NotificationMethod::Sms,
                     "push" => NotificationMethod::Push,
                     _ => {
                         println!("Invalid method. Defaulting to Email.");
@@ -502,14 +502,14 @@ fn update_event(event: &mut Event) {
                             "Enter new notification method (Email/SMS/Push)",
                             match event.notification_settings[index].method {
                                 NotificationMethod::Email => "Email",
-                                NotificationMethod::SMS => "SMS",
+                                NotificationMethod::Sms => "SMS",
                                 NotificationMethod::Push => "Push",
                             },
                         );
 
                         let method = match method_str.to_lowercase().as_str() {
                             "email" => NotificationMethod::Email,
-                            "sms" => NotificationMethod::SMS,
+                            "sms" => NotificationMethod::Sms,
                             "push" => NotificationMethod::Push,
                             _ => {
                                 println!("Invalid method. Keeping the original value.");
