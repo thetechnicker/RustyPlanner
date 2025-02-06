@@ -97,6 +97,8 @@ fn service_stop() {
         .output()
         .expect("Failed to stop background service");
     println!("Service stopped, output: {:?}", _output);
+    let err_msg = format!("error trying to kill background service. pid: {}", pid);
+    fs::remove_file("/tmp/RustyPlannerDaemon.pid").expect(&err_msg);
 }
 
 fn service_restart() {

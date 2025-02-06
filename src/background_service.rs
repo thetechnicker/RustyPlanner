@@ -7,7 +7,6 @@ use events::event::NotificationMethod;
 use events::event_manager::{EventManager, EventManagerMode};
 use miscs::notification::send_notification;
 use miscs::utils::get_path;
-use std::fs;
 use std::fs::File;
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -83,7 +82,9 @@ pub fn main_loop() -> Result<(), Error> {
         for (index, event) in event_manager.lock().unwrap().iter_events_mut().enumerate() {
             println!("\t{index}: {event:?}");
             for notification in event.notification_settings.iter() {
-                if event.start_time - Duration::minutes(notification.notify_before) <= now {
+                if event.start_time - Duration::minutes(notification.notify_before) <= now
+                    && !event.has_notified
+                {
                     match notification.method {
                         NotificationMethod::Push => {
                             send_notification(&event.title, &event.description)
@@ -91,6 +92,8 @@ pub fn main_loop() -> Result<(), Error> {
                         NotificationMethod::Email => todo!(),
                         NotificationMethod::Sms => todo!(),
                     }
+                    event.has_notified = true;
+                    has_to_save = true;
                 }
             }
         }
@@ -102,7 +105,7 @@ pub fn main_loop() -> Result<(), Error> {
 
     println!("Received SIGTERM kill signal. Exiting...");
 
-    fs::remove_file("/tmp/RustyPlannerDaemon.pid")?;
+    //fs::remove_file("/tmp/RustyPlannerDaemon.pid")?;
 
     Ok(())
 }

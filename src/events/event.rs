@@ -191,6 +191,7 @@ pub struct Event {
     pub updated_at: DateTime<Local>,              // Timestamp when the event was last updated
     pub notification_settings: Vec<Notification>, // Notification settings
     pub is_all_day: bool,                         // Some comment for astetic reasons
+    pub has_notified: bool,                       // more astetic
 }
 
 impl std::fmt::Display for Event {
@@ -219,6 +220,7 @@ impl Default for Event {
                 method: NotificationMethod::Push,
             }],
             is_all_day: false,
+            has_notified: false,
         }
     }
 }
@@ -434,6 +436,12 @@ impl Event {
                     }
                 }
 
+                if event.notification_settings.is_empty() {
+                    event.notification_settings.push(Notification {
+                        notify_before: 0,
+                        method: NotificationMethod::Push,
+                    })
+                }
                 Ok(event)
             }
             _ => Err("Expected an Object variant".to_string()),
