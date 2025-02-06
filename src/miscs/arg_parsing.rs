@@ -118,7 +118,7 @@ pub fn parse_data(mut input: &str, x: u64) -> Data {
     let mut current_item = String::new();
     let mut current_key = String::new();
     let mut index = 0;
-    for (_i, c) in input.chars().enumerate() {
+    for c in input.chars() {
         match c {
             ':' if depth == 0 && current_key.is_empty() => {
                 is_key = true;
