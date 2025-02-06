@@ -500,12 +500,11 @@ fn update_event(event: &mut Event) {
                         );
                         let method_str = ask_user(
                             "Enter new notification method (Email/SMS/Push)",
-                            &match event.notification_settings[index].method {
+                            match event.notification_settings[index].method {
                                 NotificationMethod::Email => "Email",
                                 NotificationMethod::SMS => "SMS",
                                 NotificationMethod::Push => "Push",
-                            }
-                            .to_string(),
+                            },
                         );
 
                         let method = match method_str.to_lowercase().as_str() {

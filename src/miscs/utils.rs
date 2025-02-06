@@ -58,7 +58,7 @@ pub fn time_from_str(time_str: &str) -> NaiveTime {
     let formats = ["%H:%M:%S", "%H:%M", "%I:%M %p"];
     for format in &formats {
         if let Ok(time) = NaiveTime::parse_from_str(time_str, format) {
-            return time - Local::now().offset().clone();
+            return time - *Local::now().offset();
         }
     }
     Local::now().naive_local().time()

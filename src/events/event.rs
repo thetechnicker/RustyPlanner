@@ -71,6 +71,18 @@ pub enum RecurrenceFrequency {
     Yearly,
 }
 
+impl RecurrenceFrequency {
+    pub fn from_str(string: &str) -> Self {
+        match string.to_lowercase().as_str() {
+            "daily" => Self::Daily,
+            "weekly" => Self::Daily,
+            "monthly" => Self::Daily,
+            "yearly" => Self::Daily,
+            _ => Self::Daily,
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Recurrence {
     pub frequency: RecurrenceFrequency, // Frequency of recurrence (e.g., daily, weekly, monthly)
@@ -82,34 +94,24 @@ pub struct Recurrence {
 
 #[allow(dead_code)]
 impl Recurrence {
-    pub fn from_args(args: &[String]) -> Self {
-        let frequency = match args[0].as_str() {
-            "Daily" => RecurrenceFrequency::Daily,
-            "Weekly" => RecurrenceFrequency::Weekly,
-            "Monthly" => RecurrenceFrequency::Monthly,
-            "Yearly" => RecurrenceFrequency::Yearly,
-            _ => panic!("Invalid recurrence frequency"),
-        };
-        let interval = args[1].parse().expect("Invalid interval");
-        let days_of_week = args[2].split(',').map(parse_weekday_default).collect();
-        let start_date = DateTime::parse_from_rfc3339(&args[3])
-            .expect("Invalid start date")
-            .with_timezone(&Local);
-        let end_date = if args.len() > 4 {
-            Some(
-                DateTime::parse_from_rfc3339(&args[4])
-                    .expect("Invalid end date")
-                    .with_timezone(&Local),
-            )
-        } else {
-            None
-        };
-        Recurrence {
-            frequency,
-            interval,
-            days_of_week,
-            start_date,
-            end_date,
+    pub fn from_data(data: &Data) -> Result<Self, String> {
+        data.print(0);
+        match data {
+            Data::Object(_data) => {
+                let mut recurrence = Self {
+                    frequency: RecurrenceFrequency::Daily,
+                    interval: 1,
+                    days_of_week: Vec::new(),
+                    start_date: Local::now(),
+                    end_date: None,
+                };
+                if let Some(Data::String(frequency)) = _data.get("frequency") {
+                    recurrence.frequency = RecurrenceFrequency::from_str(frequency);
+                }
+
+                Ok(recurrence)
+            }
+            _ => Err("Data must be Type Object".to_string()),
         }
     }
 }
@@ -120,19 +122,6 @@ pub struct Attendee {
     pub name: String,        // Name of the attendee
     pub email: String,       // Email of the attendee
 }
-
-// impl Attendee {
-//     pub fn from_args(args: &[String]) -> Self {
-//         let attendee_id = args[0].clone();
-//         let name = args[1].clone();
-//         let email = args[2].clone();
-//         Attendee {
-//             attendee_id,
-//             name,
-//             email,
-//         }
-//     }
-// }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Event {
@@ -366,6 +355,14 @@ impl Event {
                 }
                 if let Some(Data::Int(is_recurring)) = fields.get("is_recurring") {
                     event.is_recurring = *is_recurring != 0; // Assuming 0 is false, 1 is true
+                }
+
+                if let Some(data) = fields.get("recurrence") {
+                    event.is_recurring = true;
+                    match Recurrence::from_data(data) {
+                        Ok(recurrence) => event.recurrence = Some(recurrence),
+                        Err(_) => eprintln!("error parsing recurrence"),
+                    }
                 }
 
                 Ok(event)
