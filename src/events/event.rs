@@ -95,7 +95,7 @@ pub struct Recurrence {
 #[allow(dead_code)]
 impl Recurrence {
     pub fn from_data(data: &Data) -> Result<Self, String> {
-        data.print(0);
+        //data.print(0);
         match data {
             Data::Object(_data) => {
                 let mut recurrence = Self {
@@ -108,7 +108,9 @@ impl Recurrence {
                 if let Some(Data::String(frequency)) = _data.get("frequency") {
                     recurrence.frequency = RecurrenceFrequency::from_str(frequency);
                 }
-                if recurrence.frequency == RecurrenceFrequency::Weekly {
+                //if recurrence.frequency == RecurrenceFrequency::Weekly
+                // not sure if i want this only for weekly or always
+                {
                     if let Some(Data::String(day_name)) = _data.get("day") {
                         recurrence
                             .days_of_week
@@ -119,10 +121,23 @@ impl Recurrence {
                                 Data::String(day_name) => recurrence
                                     .days_of_week
                                     .push(parse_weekday_default(day_name)),
-                                _ => eprintln!("day {} cant be parsed", day),
+                                _ => {} //eprintln!("day {} cant be parsed", day),
                             }
                         }
                     }
+                }
+
+                if let Some(Data::Int(intervall)) = _data.get("intervall") {
+                    recurrence.interval = *intervall as i32;
+                }
+
+                if let Some(Data::String(start_time)) = _data.get("start-time") {
+                    let start_time_naive =
+                        date_from_str(start_time).and_time(time_from_str("00:00"));
+                    recurrence.start_date = DateTime::from_naive_utc_and_offset(
+                        start_time_naive,
+                        *Local::now().offset(),
+                    );
                 }
 
                 Ok(recurrence)

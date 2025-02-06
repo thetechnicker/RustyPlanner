@@ -51,17 +51,18 @@ pub fn date_from_str(date_str: &str) -> NaiveDate {
             return date;
         }
     }
-    Local::now().naive_local().date()
+    Local::now().naive_utc().date()
 }
 
 pub fn time_from_str(time_str: &str) -> NaiveTime {
     let formats = ["%H:%M:%S", "%H:%M", "%I:%M %p"];
     for format in &formats {
         if let Ok(time) = NaiveTime::parse_from_str(time_str, format) {
+            println!("{}", time.format("%H:%M:%S").to_string());
             return time - *Local::now().offset();
         }
     }
-    Local::now().naive_local().time()
+    Local::now().naive_utc().time()
 }
 
 pub fn clear_screen() {

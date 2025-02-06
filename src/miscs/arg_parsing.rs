@@ -80,9 +80,7 @@ impl Data {
     }
 
     pub fn from_string(input: &str) -> Data {
-        // Trim whitespace from the input
         let trimmed = input.trim();
-
         // Try to parse as an integer
         if let Ok(int_value) = trimmed.parse::<i64>() {
             return Data::Int(int_value);
@@ -98,9 +96,17 @@ impl Data {
     }
 }
 
-pub fn parse_data(input: &str, x: u64) -> Data {
+pub fn parse_data(mut input: &str, x: u64) -> Data {
+    input = input.trim();
+    input = input.strip_prefix("[").unwrap_or(input);
+    input = input.trim();
+    input = input.strip_suffix("]").unwrap_or(input);
+    input = input.trim();
+
     if x == 0 {
-        println!("{}", input);
+        println!("first call: {}", input);
+    } else {
+        println!("call: {} {}", x, input);
     }
     if x > 100 {
         return Data::from_string(input);
@@ -112,8 +118,7 @@ pub fn parse_data(input: &str, x: u64) -> Data {
     let mut current_item = String::new();
     let mut current_key = String::new();
     let mut index = 0;
-    let mut last_need_parsing = false;
-    for (i, c) in input.chars().enumerate() {
+    for (_i, c) in input.chars().enumerate() {
         match c {
             ':' if depth == 0 && current_key.is_empty() => {
                 is_key = true;
@@ -196,9 +201,7 @@ pub fn parse_data(input: &str, x: u64) -> Data {
                 depth += 1;
             }
             ']' => {
-                if i == input.len() - 1 {
-                    last_need_parsing = true;
-                } else if depth > 0 {
+                if depth > 0 {
                     current_item.push(c);
                 }
                 depth -= 1;
@@ -210,7 +213,7 @@ pub fn parse_data(input: &str, x: u64) -> Data {
     }
     if !current_item.is_empty() {
         let mut _data: Data = Data::None;
-        if current_item.contains(',') || current_item.contains('[') || last_need_parsing {
+        if current_item.contains(',') || current_item.contains('[') {
             _data = parse_data(&current_item, x + 1)
         } else {
             _data = Data::from_string(current_item.trim());
