@@ -130,7 +130,7 @@ impl EventManager {
             }
             (self.events.len() - 1) as isize
         } else {
-            return -1;
+            -1
         }
     }
 

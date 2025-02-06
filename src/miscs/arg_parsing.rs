@@ -112,7 +112,8 @@ pub fn parse_data(input: &str, x: u64) -> Data {
     let mut current_item = String::new();
     let mut current_key = String::new();
     let mut index = 0;
-    for c in input.chars() {
+    let mut last_need_parsing = false;
+    for (i, c) in input.chars().enumerate() {
         match c {
             ':' if depth == 0 && current_key.is_empty() => {
                 is_key = true;
@@ -126,19 +127,16 @@ pub fn parse_data(input: &str, x: u64) -> Data {
                         let mut _data: Data = Data::None;
                         if current_item.contains(',') || current_item.contains('[') {
                             _data = parse_data(&current_item, x + 1)
-                        } else {
-                            if is_key {
-                                let mut object: HashMap<String, Data> = HashMap::new();
-                                if current_key.is_empty() {
-                                    current_key = format!("{}", index);
-                                    index += 1;
-                                }
-                                object
-                                    .insert(current_key.clone(), Data::from_string(&current_item));
-                                _data = Data::Object(object);
-                            } else {
-                                _data = Data::from_string(&current_item.trim());
+                        } else if is_key {
+                            let mut object: HashMap<String, Data> = HashMap::new();
+                            if current_key.is_empty() {
+                                current_key = format!("{}", index);
+                                index += 1;
                             }
+                            object.insert(current_key.clone(), Data::from_string(&current_item));
+                            _data = Data::Object(object);
+                        } else {
+                            _data = Data::from_string(current_item.trim());
                         }
                         list.push(_data);
                         data = Data::List(list);
@@ -150,14 +148,7 @@ pub fn parse_data(input: &str, x: u64) -> Data {
                         if current_item.contains(',') || current_item.contains('[') {
                             _data = parse_data(&current_item, x + 1)
                         } else {
-                            // if is_key {
-                            //     let mut object: HashMap<String, Data> = HashMap::new();
-                            //     object
-                            //         .insert(current_key.clone(), Data::from_string(&current_item));
-                            //     _data = Data::Object(object);
-                            // } else {
-                            _data = Data::from_string(&current_item.trim());
-                            // }
+                            _data = Data::from_string(current_item.trim());
                         }
 
                         if current_key.is_empty() {
@@ -174,7 +165,7 @@ pub fn parse_data(input: &str, x: u64) -> Data {
                         if current_item.contains(',') || current_item.contains('[') {
                             _data = parse_data(&current_item, x + 1)
                         } else {
-                            _data = Data::from_string(&current_item.trim());
+                            _data = Data::from_string(current_item.trim());
                         }
                         if is_key {
                             if current_key.is_empty() {
@@ -185,8 +176,8 @@ pub fn parse_data(input: &str, x: u64) -> Data {
                             hash_map.insert(current_key.clone(), _data);
                             data = Data::Object(hash_map);
                         } else {
-                            let mut list: Vec<Data> = Vec::new();
-                            list.push(_data);
+                            let list: Vec<Data> = vec![_data];
+                            //list.push(_data);
                             data = Data::List(list);
                         }
                         current_key.clear();
@@ -205,7 +196,9 @@ pub fn parse_data(input: &str, x: u64) -> Data {
                 depth += 1;
             }
             ']' => {
-                if depth > 0 {
+                if i == input.len() - 1 {
+                    last_need_parsing = true;
+                } else if depth > 0 {
                     current_item.push(c);
                 }
                 depth -= 1;
@@ -214,22 +207,13 @@ pub fn parse_data(input: &str, x: u64) -> Data {
                 current_item.push(c);
             }
         }
-        // println!("{}", x);
     }
-    // println!("cba {}: {}", current_key, current_item);
-    // println!("--------------");
     if !current_item.is_empty() {
         let mut _data: Data = Data::None;
-        if current_item.contains(',') || current_item.contains('[') {
+        if current_item.contains(',') || current_item.contains('[') || last_need_parsing {
             _data = parse_data(&current_item, x + 1)
         } else {
-            // if is_key {
-            //     let mut object: HashMap<String, Data> = HashMap::new();
-            //     object.insert(current_key.clone(), Data::from_string(&current_item));
-            //     _data = Data::Object(object);
-            // } else {
-            _data = Data::from_string(&current_item.trim());
-            // }
+            _data = Data::from_string(current_item.trim());
         }
 
         match data {
@@ -242,8 +226,7 @@ pub fn parse_data(input: &str, x: u64) -> Data {
                     object.insert(current_key.clone(), _data);
                     data = Data::Object(object);
                 } else {
-                    let mut list: Vec<Data> = Vec::new();
-                    list.push(_data);
+                    let list: Vec<Data> = vec![_data];
                     data = Data::List(list);
                 }
             }
@@ -252,7 +235,6 @@ pub fn parse_data(input: &str, x: u64) -> Data {
                 data = Data::List(list)
             }
             Data::Object(mut object) => {
-                // _data.print(0);
                 if current_key.is_empty() {
                     current_key = format!("{}", index);
                 }
@@ -260,7 +242,6 @@ pub fn parse_data(input: &str, x: u64) -> Data {
                 data = Data::Object(object);
             }
             _ => {
-                // _data.print(0);
                 println!("{}, {}, {}", is_key, current_key, current_item);
                 unreachable!()
             }

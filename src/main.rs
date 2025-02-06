@@ -123,7 +123,7 @@ fn loop_mode(event_manager: &Arc<Mutex<EventManager>>) {
         if trimmed.to_lowercase() == "exit" {
             break;
         } else {
-            parse_commands(&trimmed, event_manager);
+            parse_commands(trimmed, event_manager);
         }
     }
 }
@@ -202,7 +202,7 @@ fn add_notification_loop(_input: &str, _event_manager: &Mutex<EventManager>) {
 }
 
 fn add_event_loop(input: &str, event_manager: &Arc<Mutex<EventManager>>) {
-    let index = event_manager.lock().unwrap().add_event_from_str(&input);
+    let index = event_manager.lock().unwrap().add_event_from_str(input);
     if index < 0 {
         eprintln!("Error when trying to add the Event");
         return;

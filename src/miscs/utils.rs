@@ -32,7 +32,7 @@ pub fn get_path() -> std::option::Option<PathBuf> {
         data_file_path = None;
     }
 
-    return data_file_path;
+    data_file_path
 }
 
 pub fn duration_to_string(duration: &Duration) -> String {

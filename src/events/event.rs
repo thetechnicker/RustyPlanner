@@ -63,7 +63,7 @@ impl Notification {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub enum RecurrenceFrequency {
     Daily,
     Weekly,
@@ -75,9 +75,9 @@ impl RecurrenceFrequency {
     pub fn from_str(string: &str) -> Self {
         match string.to_lowercase().as_str() {
             "daily" => Self::Daily,
-            "weekly" => Self::Daily,
-            "monthly" => Self::Daily,
-            "yearly" => Self::Daily,
+            "weekly" => Self::Weekly,
+            "monthly" => Self::Monthly,
+            "yearly" => Self::Yearly,
             _ => Self::Daily,
         }
     }
@@ -107,6 +107,22 @@ impl Recurrence {
                 };
                 if let Some(Data::String(frequency)) = _data.get("frequency") {
                     recurrence.frequency = RecurrenceFrequency::from_str(frequency);
+                }
+                if recurrence.frequency == RecurrenceFrequency::Weekly {
+                    if let Some(Data::String(day_name)) = _data.get("day") {
+                        recurrence
+                            .days_of_week
+                            .push(parse_weekday_default(day_name));
+                    } else if let Some(Data::List(days)) = _data.get("days") {
+                        for day in days {
+                            match day {
+                                Data::String(day_name) => recurrence
+                                    .days_of_week
+                                    .push(parse_weekday_default(day_name)),
+                                _ => eprintln!("day {} cant be parsed", day),
+                            }
+                        }
+                    }
                 }
 
                 Ok(recurrence)
@@ -318,10 +334,8 @@ impl Event {
                 let naive_datetime = date.and_time(time);
                 // println!("{}", naive_datetime.format("%d.%m.%y - %H-%M"));
 
-                event.start_time = DateTime::from_naive_utc_and_offset(
-                    naive_datetime,
-                    Local::now().offset().clone(),
-                );
+                event.start_time =
+                    DateTime::from_naive_utc_and_offset(naive_datetime, *Local::now().offset());
                 let duration = if let Some(Data::String(duration)) = fields.get("duration") {
                     match parse_duration(duration) {
                         Ok(d) => d,
@@ -334,7 +348,7 @@ impl Event {
                     Duration::hours(2)
                 };
 
-                event.end_time = event.start_time.clone() + duration;
+                event.end_time = event.start_time + duration;
 
                 if let Some(Data::String(start_time_str)) = fields.get("start_time") {
                     if let Ok(start_time) = DateTime::parse_from_rfc3339(start_time_str) {
