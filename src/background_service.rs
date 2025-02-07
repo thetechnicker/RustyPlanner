@@ -98,9 +98,10 @@ pub fn main_loop() -> Result<(), Error> {
             }
         }
         if has_to_save {
+            println!("Saving events...");
             event_manager.lock().unwrap().save_events();
         }
-        thread::sleep(StdDuration::from_millis(250));
+        thread::sleep(StdDuration::from_millis(500)); // old values: 250ms
     }
 
     println!("Received SIGTERM kill signal. Exiting...");

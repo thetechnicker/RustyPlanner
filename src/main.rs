@@ -8,6 +8,7 @@ use events::event::Event;
 use events::event::Notification;
 use events::event::NotificationMethod;
 use miscs::arg_parsing::parse_data;
+use miscs::utils::{date_from_str, time_from_str};
 // use arg_parsing::parse_kwargs;
 use events::event_manager::{EventManager, EventManagerMode};
 use std::env;
@@ -200,6 +201,7 @@ fn parse_commands(command: &str, event_manager: &Arc<Mutex<EventManager>>) {
         }
         "clear" => {
             event_manager.lock().unwrap().clear();
+            event_manager.lock().unwrap().save_events();
         }
         "cls" => {
             clear_screen();
@@ -386,25 +388,33 @@ fn update_event(event: &mut Event) {
     event.update_location(new_location);
 
     // Update start time
-    let new_start_time_str = ask_user(
-        "Enter new start time (RFC3339 format)",
-        &event.start_time.to_rfc3339(),
-    );
-    if let Ok(new_start_time) = DateTime::parse_from_rfc3339(&new_start_time_str) {
-        event.update_start_time(new_start_time.with_timezone(&Local));
-    } else {
-        println!("Invalid start time format. Keeping the original value.");
+    {
+        let time = time_from_str(&ask_user(
+            "Enter new start time",
+            &event.start_time.time().format("%H:%M").to_string(),
+        ));
+        let date = date_from_str(&ask_user(
+            "Enter new start date",
+            &event.start_time.date_naive().format("%Y-%m-%d").to_string(),
+        ));
+
+        event.start_time =
+            DateTime::from_naive_utc_and_offset(date.and_time(time), *Local::now().offset());
     }
 
     // Update end time
-    let new_end_time_str = ask_user(
-        "Enter new end time (RFC3339 format)",
-        &event.end_time.to_rfc3339(),
-    );
-    if let Ok(new_end_time) = DateTime::parse_from_rfc3339(&new_end_time_str) {
-        event.update_end_time(new_end_time.with_timezone(&Local));
-    } else {
-        println!("Invalid end time format. Keeping the original value.");
+    {
+        let time = time_from_str(&ask_user(
+            "Enter new end time",
+            &event.start_time.time().format("%H:%M").to_string(),
+        ));
+        let date = date_from_str(&ask_user(
+            "Enter new end date",
+            &event.start_time.date_naive().format("%Y-%m-%d").to_string(),
+        ));
+
+        event.end_time =
+            DateTime::from_naive_utc_and_offset(date.and_time(time), *Local::now().offset());
     }
 
     // Update is_recurring
@@ -419,13 +429,11 @@ fn update_event(event: &mut Event) {
     }
 
     // Update attendees
-
-    println!("Current attendees:");
-    for attendee in &event.attendees {
-        println!("Attendee: {}", attendee);
-    }
-
     loop {
+        println!("Current attendees:");
+        for attendee in &event.attendees {
+            println!("Attendee: {}", attendee);
+        }
         let action = ask_user(
             "Do you want to add, remove, edit an attendee, or done? (add/remove/edit/done)",
             "done",
@@ -481,6 +489,10 @@ fn update_event(event: &mut Event) {
 
     // Update notification settings
     loop {
+        println!("Current notifications:");
+        for notification in &event.notification_settings {
+            println!("Notification: {}", notification);
+        }
         let action = ask_user(
             "Do you want to add, remove, edit a notification, or done? (add/remove/edit/done)",
             "done",

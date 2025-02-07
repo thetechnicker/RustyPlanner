@@ -195,6 +195,11 @@ async fn async_watch(event_manager: Arc<Mutex<EventManager>>, path: PathBuf) -> 
     while let Some(res) = rx.next().await {
         match res {
             Ok(event) => {
+                //if event_manager.lock().unwrap().mode == EventManagerMode::Passive
+                //    && !event.kind.is_access()
+                //{
+                //    println!("{:?}", event.kind);
+                //}
                 if event.kind.is_modify() {
                     event_manager.lock().unwrap().read_events_from_file();
                 }
