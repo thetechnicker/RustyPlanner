@@ -162,6 +162,22 @@ fn parse_commands(command: &str, event_manager: &Arc<Mutex<EventManager>>) {
                 _ => print_add_help(),
             }
         }
+        _ if command.starts_with("edit") => {
+            let index = command.strip_prefix("edit").unwrap_or("").trim();
+            let index = index.parse::<usize>().unwrap_or(0);
+            if index > 0 {
+                update_event(
+                    event_manager
+                        .lock()
+                        .unwrap()
+                        .get_event_mut(index - 1)
+                        .unwrap(),
+                );
+                event_manager.lock().unwrap().save_events();
+            } else {
+                eprintln!("Invalid index: {}", index);
+            }
+        }
         _ if command.starts_with("help") => {
             let command_help = command.strip_prefix("help ").unwrap_or("");
             match command_help {
@@ -403,6 +419,12 @@ fn update_event(event: &mut Event) {
     }
 
     // Update attendees
+
+    println!("Current attendees:");
+    for attendee in &event.attendees {
+        println!("Attendee: {}", attendee);
+    }
+
     loop {
         let action = ask_user(
             "Do you want to add, remove, edit an attendee, or done? (add/remove/edit/done)",

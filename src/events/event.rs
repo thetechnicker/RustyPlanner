@@ -155,6 +155,12 @@ pub struct Attendee {
     pub email: String,       // Email of the attendee
 }
 
+impl std::fmt::Display for Attendee {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.pad(format!("Name: {}, Email: {}", self.name, self.email).as_str())
+    }
+}
+
 impl Attendee {
     pub fn from_data(data: &Data) -> Result<Self, String> {
         match data {
