@@ -7,6 +7,7 @@ use events::event::Attendee;
 use events::event::Event;
 use events::event::Notification;
 use events::event::NotificationMethod;
+use events::event::EVENT_FIELDS;
 use miscs::arg_parsing::parse_data;
 use miscs::utils::{date_from_str, time_from_str};
 // use arg_parsing::parse_kwargs;
@@ -152,14 +153,17 @@ fn parse_commands(command: &str, event_manager: &Arc<Mutex<EventManager>>) {
                     let string = input.strip_prefix("event").unwrap_or(command).trim();
                     add_event_loop(string, event_manager);
                 }
-                _ if input.starts_with("notification") => {
-                    let input = input.strip_prefix("notification").unwrap_or(command).trim();
-                    add_notification_loop(input, event_manager);
-                }
-                _ if input.starts_with("attendance") => {
-                    let input = input.strip_prefix("attendance").unwrap_or(command).trim();
-                    add_attendance_loop(input, event_manager);
-                }
+                // Currently not usefull
+                /*
+                                _ if input.starts_with("notification") => {
+                                    let input = input.strip_prefix("notification").unwrap_or(command).trim();
+                                    add_notification_loop(input, event_manager);
+                                }
+                                _ if input.starts_with("attendance") => {
+                                    let input = input.strip_prefix("attendance").unwrap_or(command).trim();
+                                    add_attendance_loop(input, event_manager);
+                                }
+                */
                 _ => print_add_help(),
             }
         }
@@ -211,14 +215,6 @@ fn parse_commands(command: &str, event_manager: &Arc<Mutex<EventManager>>) {
             print_help(); // Suggest help for valid commands
         }
     }
-}
-
-fn add_attendance_loop(_input: &str, _event_manager: &Mutex<EventManager>) {
-    todo!()
-}
-
-fn add_notification_loop(_input: &str, _event_manager: &Mutex<EventManager>) {
-    todo!()
 }
 
 fn add_event_loop(input: &str, event_manager: &Arc<Mutex<EventManager>>) {
@@ -299,44 +295,31 @@ fn ask_user(prompt: &str, default: &str) -> String {
 
 fn print_help() {
     println!("Available commands:");
-    println!("  add            - Add a new event");
-    println!("  save           - Save events to file");
-    println!("  remove <index> - Remove an event by index");
-    println!("  edit <index>   - Edit an event by index");
-    println!("  cls            - Clear the screen");
-    println!("  list           - List all events");
-    println!("  clear          - Clear all events");
-    println!("  help           - Show this help message");
-    println!("  exit           - Exit the application");
+    println!("  add    - Add a new event");
+    println!("  save   - Save events to file");
+    println!("  remove - Remove an event by index");
+    println!("  edit   - Edit an event by index");
+    println!("  cls    - Clear the screen");
+    println!("  list   - List all events");
+    println!("  clear  - Clear all events");
+    println!("  help   - Show this help message");
+    println!("  exit   - Exit the application");
     println!();
-    println!("Use the 'add' command to create a new event with optional parameters for description, location, and notification time.");
-    println!("For more details on each command, refer to the documentation.");
+    //println!("Use the 'add' command to create a new event with optional parameters for description, location, and notification time.");
+    println!(
+        "For more details on each command run `help [Command Name]`, refer to the documentation."
+    );
 }
 
 fn print_add_help() {
-    let help_message = r#"
-Usage: add [event|notification|attendance] [OPTIONS]
-
-event:
-    event_id =      [EVENT_ID]
-    title =         [TITLE]
-    description =   [DESCRIPTION]
-    start_time =    [START_TIME] (format: RFC3339)
-    end_time =      [END_TIME] (format: RFC3339)
-    location =      [LOCATION]
-    is_recurring =  [true|false]
-    recurrence =    [RECURRING_DETAILS] (if applicable)
-
-notification:
-    event_id =      [EVENT_ID]
-    time_before =   [TIME_BEFORE] (e.g., "1 hour before")
-
-attendance:
-    event_id =      [EVENT_ID]
-    attendees =     [ATTENDEE_LIST] (comma-separated list of attendee names)
-
-"#;
-
+    let mut help_message = "Usage: add event [OPTIONS]\n\n".to_string();
+    help_message += "event:\n";
+    for attribute in EVENT_FIELDS.iter() {
+        let part_a = format!("\t{}:", attribute[0]);
+        let part_b = format!("\t[{}]", attribute[1]);
+        help_message += &format!("{:<20}{}\n", part_a, part_b);
+        //help_message += &format!("\t{}: \t\t[{}]\n", attribute[0], attribute[1]);
+    }
     println!("{}", help_message);
 }
 
