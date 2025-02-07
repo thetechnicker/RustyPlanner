@@ -7,7 +7,7 @@ use events::event::Attendee;
 use events::event::Event;
 use events::event::Notification;
 use events::event::NotificationMethod;
-use events::event::EVENT_FIELDS;
+use events::event::{ATTENDEE_FIELDS, EVENT_FIELDS, RECURRENCE_FIELDS};
 use miscs::arg_parsing::parse_data;
 use miscs::utils::{date_from_str, time_from_str};
 // use arg_parsing::parse_kwargs;
@@ -318,7 +318,22 @@ fn print_add_help() {
         let part_a = format!("\t{}:", attribute[0]);
         let part_b = format!("\t[{}]", attribute[1]);
         help_message += &format!("{:<20}{}\n", part_a, part_b);
-        //help_message += &format!("\t{}: \t\t[{}]\n", attribute[0], attribute[1]);
+        if attribute[0] == "recurrence" {
+            help_message += "\t\tRecurrence Attributes:\n";
+            for recurrence_attribute in RECURRENCE_FIELDS.iter() {
+                let part_a = format!("\t\t\t{}:", recurrence_attribute[0]);
+                let part_b = format!("\t\t[{}]", recurrence_attribute[1]);
+                help_message += &format!("\t\t{:<20}{}\n", part_a, part_b);
+            }
+        }
+        if attribute[0] == "attendees" {
+            help_message += "\tAttendee Attributes:\n";
+            for attendee_attributes in ATTENDEE_FIELDS.iter() {
+                let part_a = format!("\t\t\t{}:", attendee_attributes[0]);
+                let part_b = format!("\t\t[{}]", attendee_attributes[1]);
+                help_message += &format!("\t\t{:<20}{}\n", part_a, part_b);
+            }
+        }
     }
     println!("{}", help_message);
 }
