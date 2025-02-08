@@ -237,18 +237,16 @@ impl Recurrence {
                     && (now - self.start_date).num_hours() % self.interval == 0
             }
             RecurrenceFrequency::Daily => {
-                is_minute
-                    && is_hour
-                    && self.start_date <= now
-                    && self.start_date <= now
-                    && self.end_date.unwrap_or(now) >= now
-                    && (now - self.start_date).num_days() % self.interval == 0
+                !(!is_minute
+                    || !is_hour
+                    || self.start_date > now
+                    || self.end_date.unwrap_or(now) < now
+                    || (now - self.start_date).num_days() % self.interval != 0)
             }
             RecurrenceFrequency::Weekly => {
                 is_minute
                     && is_hour
                     && is_week_day
-                    && self.start_date <= now
                     && self.start_date <= now
                     && self.end_date.unwrap_or(now) >= now
                     && (now - self.start_date).num_days() % (self.interval * 7) == 0
@@ -257,20 +255,18 @@ impl Recurrence {
                 is_minute
                     && is_hour
                     && is_day
-                    && self.start_date <= now
-                    && self.start_date <= now
+                    && self.start_date > now
                     && self.end_date.unwrap_or(now) >= now
                     && (now - self.start_date).num_days() % self.interval == 0
             }
             RecurrenceFrequency::Yearly => {
-                is_minute
-                    && is_hour
-                    && is_day
-                    && is_month
-                    && self.start_date <= now
-                    && self.start_date <= now
-                    && self.end_date.unwrap_or(now) >= now
-                    && (now - self.start_date).num_days() % self.interval == 0
+                !(!is_minute
+                    || !is_hour
+                    || !is_day
+                    || !is_month
+                    || self.start_date > now
+                    || self.end_date.unwrap_or(now) < now
+                    || (now - self.start_date).num_days() % self.interval != 0)
             }
         }
     }
