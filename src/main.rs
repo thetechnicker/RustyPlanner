@@ -331,16 +331,16 @@ fn print_add_help() {
         if attribute[0] == "recurrence" {
             help_message += "\t\tRecurrence Attributes:\n";
             for recurrence_attribute in RECURRENCE_FIELDS.iter() {
-                let part_a = format!("\t\t\t{}:", recurrence_attribute[0]);
-                let part_b = format!("\t\t[{}]", recurrence_attribute[1]);
+                let part_a = format!("\t{}:", recurrence_attribute[0]);
+                let part_b = format!("\t[{}]", recurrence_attribute[1]);
                 help_message += &format!("\t\t{:<20}{}\n", part_a, part_b);
             }
         }
         if attribute[0] == "attendees" {
             help_message += "\tAttendee Attributes:\n";
             for attendee_attributes in ATTENDEE_FIELDS.iter() {
-                let part_a = format!("\t\t\t{}:", attendee_attributes[0]);
-                let part_b = format!("\t\t[{}]", attendee_attributes[1]);
+                let part_a = format!("\t{}:", attendee_attributes[0]);
+                let part_b = format!("\t[{}]", attendee_attributes[1]);
                 help_message += &format!("\t\t{:<20}{}\n", part_a, part_b);
             }
         }
