@@ -11,6 +11,7 @@ pub fn send_notification(title: &str, message: &str) {
     }
 }
 
+#[inline]
 fn is_wsl() -> bool {
     #[cfg(target_os = "linux")]
     {

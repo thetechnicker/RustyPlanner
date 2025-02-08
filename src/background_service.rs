@@ -1,17 +1,15 @@
 mod events;
-mod notification;
-mod utils;
+mod miscs;
 
-use events::event_manager::{EventManager, EventManagerMode};
-// use notify_rust::Notification;
 use daemonize::Daemonize;
-use notification::send_notification;
-use std::fs;
+use events::event::NotificationMethod;
+use events::event_manager::{EventManager, EventManagerMode};
+use miscs::notification::send_notification;
+use miscs::utils::get_path;
 use std::fs::File;
 use std::sync::{Arc, Mutex};
 use std::thread;
-use std::time::Duration;
-use utils::get_path;
+use std::time::Duration as StdDuration;
 use uzers::{get_current_gid, get_current_uid};
 
 use signal_hook::flag;
@@ -50,6 +48,7 @@ fn main() -> Result<(), Error> {
     }
 }
 
+#[allow(unused_mut)]
 pub fn main_loop() -> Result<(), Error> {
     let term = Arc::new(AtomicBool::new(false));
 
@@ -72,44 +71,50 @@ pub fn main_loop() -> Result<(), Error> {
     // event_manager.lock().unwrap().read_events_from_file();
 
     while !term.load(Ordering::Relaxed) {
-        let time = chrono::Local::now().naive_local();
+        let now = chrono::Local::now();
         println!(
             "{}: Background service is running...",
-            time.format("%Y-%m-%d %H:%M:%S")
+            now.format("%Y-%m-%d %H:%M:%S")
         );
         // event_manager.lock().unwrap().list_events();
         let mut has_to_save = false;
         for (index, event) in event_manager.lock().unwrap().iter_events_mut().enumerate() {
             println!("\t{index}: {event:?}");
-            // is it time to notify the user?
-            let mut event_datetime = event.date.and_time(event.time);
-            if let Some(alarm_time) = event.alarm_time {
-                event_datetime -= alarm_time;
-            }
-            if event_datetime <= chrono::Local::now().naive_local() && !event.has_notified {
-                println!("Time to notify the user!");
-                let message = format!(
-                    "Event: {}\nDescription: {}\nLocation {}\nDate: {}\nTime: {}",
-                    event.name,
-                    event.description.as_ref().unwrap_or(&String::from("")),
-                    event.location.as_ref().unwrap_or(&String::from("")),
-                    event.date,
-                    event.time
-                );
-                send_notification(&event.name, &message);
-                event.has_notified = true;
-                has_to_save = true;
+            let notifications = event.is_time_to_notify(now);
+            for notification in notifications {
+                println!("Notification: {:?}", notification);
+                if notification.1 && !event.notification_settings[notification.0].has_notified {
+                    match event.notification_settings[notification.0].method {
+                        NotificationMethod::Push => {
+                            send_notification(&event.title, &event.description)
+                        }
+                        NotificationMethod::Email => todo!(),
+                        NotificationMethod::Sms => todo!(),
+                    }
+                    event.notification_settings[notification.0].has_notified = true;
+                    has_to_save = true;
+                } else if event.is_recurring
+                    && event.notification_settings[notification.0].has_notified
+                {
+                    println!("Resetting notification for recurring event");
+                    if !notification.1 {
+                        event.notification_settings[notification.0].has_notified = false;
+                        has_to_save = true;
+                    }
+                }
             }
         }
         if has_to_save {
+            println!("Saving events...");
             event_manager.lock().unwrap().save_events();
         }
-        thread::sleep(Duration::from_millis(250));
+        println!("{}", String::from("-").repeat(50));
+        thread::sleep(StdDuration::from_millis(500)); // old values: 250ms
     }
 
     println!("Received SIGTERM kill signal. Exiting...");
 
-    fs::remove_file("/tmp/RustyPlannerDaemon.pid")?;
+    //fs::remove_file("/tmp/RustyPlannerDaemon.pid")?;
 
     Ok(())
 }

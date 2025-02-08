@@ -6,21 +6,22 @@ use std::fs;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
+use crate::miscs::arg_parsing::parse_data;
+
 use super::event::Event;
 
 #[derive(PartialEq, Eq)]
 pub enum EventManagerMode {
-    #[allow(dead_code)]
-    Active, // manages events, has read/write access
+    Active,  // manages events, has read/write access
     Passive, // handles notification, read only
 }
 
 pub struct EventManager {
     file_path: PathBuf,
-    #[allow(dead_code)]
+
     auto_save: bool,
     events: Vec<Event>,
-    #[allow(dead_code)]
+
     mode: EventManagerMode,
 }
 
@@ -52,30 +53,14 @@ impl EventManager {
         event_manager
     }
 
-    #[allow(dead_code)]
-    pub fn list_events(&self) {
-        println!("Events:");
-        for (index, event) in self.events.iter().enumerate() {
-            println!("\t{index}: {event:?}");
-        }
-    }
-
-    pub fn save_events(&self) {
-        //if let EventManagerMode::Active = self.mode {
-        // println!("saved Events");
-        // Convert the vector of events to a JSON string
-        let json_string = serde_json::to_string(&self.events).expect("Failed to convert to JSON");
-
-        // Print the JSON string
-        // println!("{}", json_string);
-        if let Err(e) = fs::write(&self.file_path, json_string) {
-            eprintln!("Failed to save file: {}", e);
-        } else {
-            println!("Events saved successfully.");
-        }
-        /*} else {
-            println!("Cannot save events in Passive mode.");
-        }*/
+    pub fn monitor_file(event_manager: Arc<Mutex<EventManager>>, file_path: PathBuf) {
+        std::thread::spawn(move || {
+            futures::executor::block_on(async {
+                if let Err(e) = async_watch(event_manager, file_path).await {
+                    println!("error: {:?}", e)
+                }
+            });
+        });
     }
 
     pub fn read_events_from_file(&mut self) {
@@ -90,7 +75,23 @@ impl EventManager {
         }
     }
 
-    #[allow(dead_code)]
+    pub fn save_events(&self) {
+        let json_string = serde_json::to_string(&self.events).expect("Failed to convert to JSON");
+
+        if let Err(e) = fs::write(&self.file_path, json_string) {
+            eprintln!("Failed to save file: {}", e);
+        } else {
+            println!("Events saved successfully.");
+        }
+    }
+
+    pub fn list_events(&self) {
+        println!("Events:");
+        for (index, event) in self.events.iter().enumerate() {
+            println!("{index}: {}", event);
+        }
+    }
+
     pub fn clear(&mut self) {
         if EventManagerMode::Active == self.mode {
             self.events.clear();
@@ -102,54 +103,37 @@ impl EventManager {
         }
     }
 
-    #[allow(dead_code)]
     pub fn get_event(&mut self, x: usize) -> Option<&Event> {
         Some(&self.events[x])
     }
-    #[allow(dead_code)]
+
     pub fn get_event_mut(&mut self, x: usize) -> Option<&mut Event> {
         Some(&mut self.events[x])
     }
 
-    // #[allow(dead_code)]
-    // pub fn get_event_mut(&mut self, x: usize) -> Option<Event> {
-    //     self.events.get_mut(x)
-    // }
-
-    #[allow(dead_code)]
     pub fn iter_events(&self) -> impl Iterator<Item = &Event> {
         self.events.iter()
     }
 
-    #[allow(dead_code)]
     pub fn iter_events_mut(&mut self) -> impl Iterator<Item = &mut Event> {
         self.events.iter_mut()
     }
 
-    pub fn monitor_file(event_manager: Arc<Mutex<EventManager>>, file_path: PathBuf) {
-        std::thread::spawn(move || {
-            futures::executor::block_on(async {
-                if let Err(e) = async_watch(event_manager, file_path).await {
-                    println!("error: {:?}", e)
-                }
-            });
-        });
-    }
-
-    #[allow(dead_code)]
-    pub fn add_event(&mut self, event: Event) -> isize {
+    pub fn add_event(&mut self, mut event: Event) -> isize {
         if EventManagerMode::Active == self.mode {
+            if event.event_id.is_empty() {
+                event.event_id = format!("#{}", self.events.len() + 1);
+            }
             self.events.push(event);
             if self.auto_save {
                 self.save_events();
             }
             (self.events.len() - 1) as isize
         } else {
-            return -1;
+            -1
         }
     }
 
-    #[allow(dead_code)]
     pub fn remove_event(&mut self, x: usize) -> Option<Event> {
         if x < self.events.len() {
             Some(self.events.remove(x))
@@ -158,7 +142,6 @@ impl EventManager {
         }
     }
 
-    #[allow(dead_code)]
     pub fn replace_event(&mut self, x: usize, event: Event) -> Option<Event> {
         let mut _event: Option<Event> = None;
         if x < self.events.len() {
@@ -170,6 +153,22 @@ impl EventManager {
             self.save_events();
         }
         _event
+    }
+
+    pub fn add_event_from_str(&mut self, string: &str) -> isize {
+        let data = parse_data(string, 0);
+        data.print(0);
+        let event = Event::from_data(data);
+        match event {
+            Ok(e) => {
+                // println!("{}", e);
+                self.add_event(e)
+            }
+            Err(_e) => {
+                // eprintln!("{}", e);
+                -1
+            }
+        }
     }
 }
 
@@ -196,8 +195,12 @@ async fn async_watch(event_manager: Arc<Mutex<EventManager>>, path: PathBuf) -> 
     while let Some(res) = rx.next().await {
         match res {
             Ok(event) => {
+                //if event_manager.lock().unwrap().mode == EventManagerMode::Passive
+                //    && !event.kind.is_access()
+                //{
+                //    println!("{:?}", event.kind);
+                //}
                 if event.kind.is_modify() {
-                    //println!("changed: {:?}", event);
                     event_manager.lock().unwrap().read_events_from_file();
                 }
             }
