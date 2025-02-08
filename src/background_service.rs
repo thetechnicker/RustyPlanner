@@ -1,7 +1,6 @@
 mod events;
 mod miscs;
 
-use chrono::Duration;
 use daemonize::Daemonize;
 use events::event::NotificationMethod;
 use events::event_manager::{EventManager, EventManagerMode};
