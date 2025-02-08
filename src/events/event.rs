@@ -7,6 +7,41 @@ use crate::miscs::{
     utils::{date_from_str, parse_duration, time_from_str},
 };
 
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Categories {
+    pub categories: Vec<String>,
+}
+
+impl Categories {
+    pub fn load_categories(path: &str) -> Result<Self, String> {
+        if !std::path::Path::new(path).exists() {
+            Ok(Self {
+                categories: vec!["Default".to_string()],
+            })
+        } else {
+            let content = std::fs::read_to_string(path).expect("Error reading file");
+            if let Ok(categories) = serde_json::from_str(&content) {
+                Ok(categories)
+            } else {
+                Err("Error parsing categories".to_string())
+            }
+        }
+    }
+
+    pub fn save_categories(&self, path: &str) {
+        let json_string = serde_json::to_string(self).expect("Error converting to json");
+        if let Err(e) = std::fs::write(path, json_string) {
+            eprintln!("Error saving categories: {}", e);
+        } else {
+            println!("Categories saved successfully");
+        }
+    }
+
+    pub fn add_category(&mut self, category: String) {
+        self.categories.push(category);
+    }
+}
+
 fn parse_weekday(value: &str) -> Option<Weekday> {
     match value.to_lowercase().as_str() {
         "mon" | "monday" => Some(Weekday::Mon),
@@ -323,6 +358,7 @@ pub struct Event {
     pub updated_at: DateTime<Local>,              // Timestamp when the event was last updated
     pub notification_settings: Vec<Notification>, // Notification settings
     pub is_all_day: bool,                         // Some comment for astetic reasons
+    pub categories: Vec<String>,                  // Categories for the event
 }
 
 impl std::fmt::Display for Event {
@@ -348,6 +384,7 @@ impl Default for Event {
             updated_at: Local::now(),
             notification_settings: Default::default(),
             is_all_day: false,
+            categories: vec!["Default".to_string()],
         }
     }
 }
