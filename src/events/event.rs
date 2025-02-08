@@ -1,5 +1,5 @@
 use chrono::Datelike;
-use chrono::{DateTime, Duration, Local, Weekday};
+use chrono::{DateTime, Duration, Local, Timelike, Weekday};
 use serde::{Deserialize, Serialize};
 
 use crate::miscs::{
@@ -121,13 +121,16 @@ impl RecurrenceFrequency {
 pub struct Recurrence {
     pub frequency: RecurrenceFrequency, // Frequency of recurrence (e.g., daily, weekly, monthly)
     pub interval: i64,                  // Interval between occurrences (e.g., every 2 weeks)
-    pub days_of_week: Vec<Weekday>, // Days of the week for weekly events (e.g., ["Monday", "Wednesday"])
-    pub days_of_month: Vec<u32>,    // Days of the month for monthly events (e.g., [1, 15])
-    pub days_months_of_year: Vec<(u32, u32)>, // Days and months of the year for yearly events (e.g., [(1, 1), (15, 8)])
-    pub minutes_of_hour: Vec<u32>, // Minutes of the hour for hourly events (e.g., [0, 30])
-    pub hours_of_day: Vec<u32>,    // Hours of the day for daily events (e.g., [8, 12, 18])
-    pub start_date: DateTime<Local>, // Start date for the recurrence
+    pub start_date: DateTime<Local>,    // Start date for the recurrence
     pub end_date: Option<DateTime<Local>>, // End date for the recurrence (optional)
+
+    // Fields for specific timing
+    pub minute: Option<u32>,
+    pub hour: Option<u32>,
+    pub day: Option<u32>,
+    pub week_day: Option<Weekday>,
+    pub month: Option<u32>,
+    pub year: Option<u32>,
 }
 
 #[allow(dead_code)]
@@ -139,75 +142,25 @@ impl Recurrence {
                 let mut recurrence = Self {
                     frequency: RecurrenceFrequency::Daily,
                     interval: 1,
-                    days_of_week: Vec::new(),
-                    days_of_month: Vec::new(),
-                    days_months_of_year: Vec::new(),
-                    minutes_of_hour: Vec::new(),
-                    hours_of_day: Vec::new(),
                     start_date: Local::now(),
                     end_date: None,
+
+                    minute: None,
+                    hour: None,
+                    day: None,
+                    week_day: None,
+                    month: None,
+                    year: None,
                 };
                 if let Some(Data::String(frequency)) = _data.get("frequency") {
                     recurrence.frequency = RecurrenceFrequency::from_str(frequency);
-                }
-
-                match recurrence.frequency {
-                    RecurrenceFrequency::Hourly => {
-                        if let Some(Data::List(minutes)) = _data.get("minutes-of-hour") {
-                            for minute in minutes {
-                                if let Data::Int(minute) = minute {
-                                    recurrence.minutes_of_hour.push(*minute as u32);
-                                }
-                            }
-                        }
-                    }
-                    RecurrenceFrequency::Daily => {
-                        if let Some(Data::List(hours)) = _data.get("hours-of-day") {
-                            for hour in hours {
-                                if let Data::Int(hour) = hour {
-                                    recurrence.hours_of_day.push(*hour as u32);
-                                }
-                            }
-                        }
-                    }
-                    RecurrenceFrequency::Weekly => {
-                        /*if let Some(Data::String(day_name)) = _data.get("week-day") {
-                            recurrence
-                                .days_of_week
-                                .push(parse_weekday_default(day_name));
-                        } else*/
-                        if let Some(Data::List(days)) = _data.get("week-days") {
-                            for day in days {
-                                if let Data::String(day_name) = day {
-                                    recurrence
-                                        .days_of_week
-                                        .push(parse_weekday_default(day_name))
-                                }
-                            }
-                        }
-                    }
-                    RecurrenceFrequency::Monthly => {
-                        /*if let Some(Data::Int(day)) = _data.get("day-of-month") {
-                            recurrence.days_of_month.push(*day as u32);
-                        } else*/
-                        if let Some(Data::List(days)) = _data.get("days-of-month") {
-                            for day in days {
-                                if let Data::Int(day) = day {
-                                    recurrence.days_of_month.push(*day as u32)
-                                }
-                            }
-                        }
-                    }
-                    RecurrenceFrequency::Yearly => {
-                        todo!("dont know how i want to implement this");
-                    }
                 }
 
                 if let Some(Data::Int(intervall)) = _data.get("intervall") {
                     recurrence.interval = *intervall;
                 }
 
-                if let Some(Data::String(start_time)) = _data.get("start-time") {
+                if let Some(Data::String(start_time)) = _data.get("start-date") {
                     let start_time_naive =
                         date_from_str(start_time).and_time(time_from_str("00:00"));
                     recurrence.start_date = DateTime::from_naive_utc_and_offset(
@@ -216,32 +169,109 @@ impl Recurrence {
                     );
                 }
 
+                if let Some(Data::String(end_time)) = _data.get("end-") {
+                    let end_time_naive = date_from_str(end_time).and_time(time_from_str("24:00"));
+                    recurrence.end_date = Some(DateTime::from_naive_utc_and_offset(
+                        end_time_naive,
+                        *Local::now().offset(),
+                    ));
+                }
+
+                if let Some(Data::Int(minute)) = _data.get("minute") {
+                    recurrence.minute = Some(*minute as u32);
+                }
+                if let Some(Data::Int(hour)) = _data.get("hour") {
+                    recurrence.hour = Some(*hour as u32);
+                }
+                if let Some(Data::Int(day)) = _data.get("day") {
+                    recurrence.day = Some(*day as u32);
+                }
+                if let Some(Data::String(week_day)) = _data.get("week-day") {
+                    recurrence.week_day = parse_weekday(week_day);
+                }
+                if let Some(Data::Int(month)) = _data.get("month") {
+                    recurrence.month = Some(*month as u32);
+                }
+                if let Some(Data::Int(year)) = _data.get("year") {
+                    recurrence.year = Some(*year as u32);
+                }
+
                 Ok(recurrence)
             }
             _ => Err("Data must be Type Object".to_string()),
         }
     }
 
-    pub fn is_now(&mut self, now: DateTime<Local>) -> bool {
+    pub fn is_now(&self, now: DateTime<Local>) -> bool {
+        let is_minute = self
+            .minute
+            .map_or(self.frequency != RecurrenceFrequency::Hourly, |minute| {
+                minute == now.minute()
+            });
+        let is_hour = self
+            .hour
+            .map_or(self.frequency != RecurrenceFrequency::Daily, |hour| {
+                hour == now.hour()
+            });
+        let is_day = self
+            .day
+            .map_or(self.frequency != RecurrenceFrequency::Monthly, |day| {
+                day == now.day()
+            });
+        let is_week_day = self
+            .week_day
+            .map_or(self.frequency != RecurrenceFrequency::Weekly, |week_day| {
+                week_day == now.weekday()
+            });
+        let is_month = self
+            .month
+            .map_or(self.frequency != RecurrenceFrequency::Yearly, |month| {
+                month == now.month()
+            });
+
         match self.frequency {
+            RecurrenceFrequency::Hourly => {
+                is_minute
+                    && self.start_date <= now
+                    && self.end_date.unwrap_or(now) >= now
+                    && (now - self.start_date).num_hours() % self.interval == 0
+            }
+            RecurrenceFrequency::Daily => {
+                is_minute
+                    && is_hour
+                    && self.start_date <= now
+                    && self.start_date <= now
+                    && self.end_date.unwrap_or(now) >= now
+                    && (now - self.start_date).num_days() % self.interval == 0
+            }
             RecurrenceFrequency::Weekly => {
-                self.days_of_week.contains(&now.weekday())
+                is_minute
+                    && is_hour
+                    && is_week_day
+                    && self.start_date <= now
                     && self.start_date <= now
                     && self.end_date.unwrap_or(now) >= now
                     && (now - self.start_date).num_days() % (self.interval * 7) == 0
             }
-            RecurrenceFrequency::Daily => {
-                self.start_date <= now
-                    && self.end_date.unwrap_or(now) >= now
-                    && (now - self.start_date).num_days() % self.interval == 0
-            }
             RecurrenceFrequency::Monthly => {
-                self.days_of_month.contains(&now.day())
+                is_minute
+                    && is_hour
+                    && is_day
+                    && self.start_date <= now
                     && self.start_date <= now
                     && self.end_date.unwrap_or(now) >= now
                     && (now - self.start_date).num_days() % self.interval == 0
             }
-            _ => false,
+            RecurrenceFrequency::Yearly => {
+                is_minute
+                    && is_hour
+                    && is_day
+                    && is_month
+                    && self.start_date <= now
+                    && self.start_date <= now
+                    && self.end_date.unwrap_or(now) >= now
+                    && (now - self.start_date).num_days() % self.interval == 0
+            }
         }
     }
 }
@@ -546,15 +576,28 @@ impl Event {
         }
     }
 
-    pub fn is_time_to_notify(&self, now: DateTime<Local>) -> bool {
-        for notification in self.notification_settings.iter() {
-            if self.start_time - Duration::minutes(notification.notify_before) <= now
+    pub fn is_time_to_notify(&self, now: DateTime<Local>) -> Vec<(usize, bool)> {
+        let mut notifications = vec![];
+        for (i, notification) in self.notification_settings.iter().enumerate() {
+            if self.is_recurring {
+                if self
+                    .recurrence
+                    .as_ref()
+                    .unwrap()
+                    .is_now(now + Duration::minutes(notification.notify_before))
+                    && !notification.has_notified
+                {
+                    notifications.push((i, true));
+                }
+            } else if self.start_time - Duration::minutes(notification.notify_before) <= now
                 && !notification.has_notified
             {
-                return true;
+                notifications.push((i, true));
+            } else {
+                notifications.push((i, false));
             }
         }
-        false
+        notifications
     }
 }
 
@@ -586,7 +629,7 @@ pub const EVENT_FIELDS: [[&str; 2]; 15] = [
     ],
 ];
 
-pub const RECURRENCE_FIELDS: [[&str; 2]; 8] = [
+pub const RECURRENCE_FIELDS: [[&str; 2]; 10] = [
     [
         "frequency",
         "Frequency of recurrence (e.g., daily, weekly, monthly)",
@@ -595,24 +638,14 @@ pub const RECURRENCE_FIELDS: [[&str; 2]; 8] = [
         "intervall",
         "Interval between occurrences (e.g., every 2 weeks)",
     ],
-    [
-        "week-day",
-        "Day of the week for weekly events (e.g., Monday)",
-    ],
-    [
-        "day-of-month",
-        "Day of the month for monthly events (e.g., 1)",
-    ],
-    [
-        "minutes-of-hour",
-        "Minutes of the hour for hourly events (e.g., [0, 30])",
-    ],
-    [
-        "hours-of-day",
-        "Hours of the day for daily events (e.g., [8, 12, 18])",
-    ],
     ["start-time", "Start date for the recurrence"],
     ["end-time", "End date for the recurrence (optional)"],
+    ["minute", "Minute of the hour for the event"],
+    ["hour", "Hour of the day for the event"],
+    ["day", "Day of the month for the event"],
+    ["week-day", "Day of the week for the event"],
+    ["month", "Month of the year for the event"],
+    ["year", "Year for the event"],
 ];
 
 pub const ATTENDEE_FIELDS: [[&str; 2]; 2] = [

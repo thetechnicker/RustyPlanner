@@ -81,6 +81,22 @@ pub fn main_loop() -> Result<(), Error> {
         let mut has_to_save = false;
         for (index, event) in event_manager.lock().unwrap().iter_events_mut().enumerate() {
             println!("\t{index}: {event:?}");
+            let notifications = event.is_time_to_notify(now);
+            for notification in notifications {
+                println!("Notification: {:?}", notification);
+                if notification.1 {
+                    match event.notification_settings[notification.0].method {
+                        NotificationMethod::Push => {
+                            send_notification(&event.title, &event.description)
+                        }
+                        NotificationMethod::Email => todo!(),
+                        NotificationMethod::Sms => todo!(),
+                    }
+                    //event.notification_settings[notification.0].has_notified = true;
+                    has_to_save = true;
+                }
+            }
+            /*
             if !event.is_recurring {
                 for notification in event.notification_settings.iter_mut() {
                     if event.start_time - Duration::minutes(notification.notify_before) <= now
@@ -98,6 +114,7 @@ pub fn main_loop() -> Result<(), Error> {
                     }
                 }
             }
+            */
         }
         if has_to_save {
             println!("Saving events...");
