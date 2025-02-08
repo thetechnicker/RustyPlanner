@@ -1,45 +1,40 @@
 use chrono::Datelike;
 use chrono::{DateTime, Duration, Local, Timelike, Weekday};
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
+use std::sync::Mutex;
 
 use crate::miscs::{
     arg_parsing::Data,
     utils::{date_from_str, parse_duration, time_from_str},
 };
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Categories {
-    pub categories: Vec<String>,
+pub static CATEGORIES: Mutex<Vec<String>> = Mutex::new(vec![]);
+
+pub fn load_categories(path: &PathBuf) {
+    let mut categories = CATEGORIES.lock().unwrap();
+    if !std::path::Path::new(path).exists() {
+        categories.append(&mut vec![
+            "Work".to_string(),
+            "Personal".to_string(),
+            "Family".to_string(),
+            "Health".to_string(),
+            "Education".to_string(),
+            "Entertainment".to_string(),
+            "Other".to_string(),
+        ]);
+    } else {
+        let categories_str = std::fs::read_to_string(path).unwrap();
+        for category in categories_str.lines() {
+            categories.push(category.trim().to_string());
+        }
+    }
 }
 
-impl Categories {
-    pub fn load_categories(path: &str) -> Result<Self, String> {
-        if !std::path::Path::new(path).exists() {
-            Ok(Self {
-                categories: vec!["Default".to_string()],
-            })
-        } else {
-            let content = std::fs::read_to_string(path).expect("Error reading file");
-            if let Ok(categories) = serde_json::from_str(&content) {
-                Ok(categories)
-            } else {
-                Err("Error parsing categories".to_string())
-            }
-        }
-    }
-
-    pub fn save_categories(&self, path: &str) {
-        let json_string = serde_json::to_string(self).expect("Error converting to json");
-        if let Err(e) = std::fs::write(path, json_string) {
-            eprintln!("Error saving categories: {}", e);
-        } else {
-            println!("Categories saved successfully");
-        }
-    }
-
-    pub fn add_category(&mut self, category: String) {
-        self.categories.push(category);
-    }
+pub fn save_categories(path: &PathBuf) {
+    let categories = CATEGORIES.lock().unwrap();
+    let categories_str = categories.join("\n");
+    std::fs::write(path, categories_str).unwrap();
 }
 
 fn parse_weekday(value: &str) -> Option<Weekday> {
@@ -108,7 +103,7 @@ impl Default for Notification {
 }
 
 impl Notification {
-    pub fn from_data(data: Data) -> Result<Self, String> {
+    pub fn from_data(data: &Data) -> Result<Self, String> {
         match data {
             Data::Object(data_object) => {
                 let mut notification = Self::default();
@@ -596,6 +591,26 @@ impl Event {
                     for anttendee_data in attendees {
                         if let Ok(attendee) = Attendee::from_data(anttendee_data) {
                             event.attendees.push(attendee);
+                        }
+                    }
+                }
+
+                if let Some(Data::List(notifications)) = fields.get("notification-settings") {
+                    for notification_data in notifications {
+                        if let Ok(notification) = Notification::from_data(notification_data) {
+                            event.notification_settings.push(notification);
+                        }
+                    }
+                }
+
+                if let Some(Data::String(is_all_day)) = fields.get("is-all-day") {
+                    event.is_all_day = is_all_day == "true";
+                }
+
+                if let Some(Data::List(categories)) = fields.get("categories") {
+                    for category in categories {
+                        if let Data::String(category) = category {
+                            event.categories.push(category.clone());
                         }
                     }
                 }

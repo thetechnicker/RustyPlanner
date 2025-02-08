@@ -10,7 +10,7 @@ use std::path::PathBuf;
 #[cfg(test)]
 pub fn get_path() -> std::option::Option<PathBuf> {
     let tmp_dir = std::env::temp_dir();
-    Some(tmp_dir.join("dates.json"))
+    Some(tmp_dir)
 }
 
 #[cfg(not(test))]
@@ -26,7 +26,7 @@ pub fn get_path() -> std::option::Option<PathBuf> {
 
         fs::create_dir_all(data_dir.clone()).expect("Failed to create data directory");
 
-        data_file_path = Some(data_dir.join("dates.json"));
+        data_file_path = Some(data_dir);
     } else {
         eprintln!("Could not find base directories.");
         data_file_path = None;

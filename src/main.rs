@@ -3,32 +3,38 @@ mod miscs;
 
 use chrono::DateTime;
 use chrono::Local;
-use events::event::Attendee;
-use events::event::Event;
-use events::event::Notification;
-use events::event::NotificationMethod;
-use events::event::{ATTENDEE_FIELDS, EVENT_FIELDS, RECURRENCE_FIELDS};
+use events::{
+    event::{
+        load_categories, save_categories, Attendee, Event, Notification, NotificationMethod,
+        ATTENDEE_FIELDS, EVENT_FIELDS, RECURRENCE_FIELDS,
+    },
+    event_manager::{EventManager, EventManagerMode},
+};
 use miscs::arg_parsing::parse_data;
+use miscs::utils::{clear_screen, get_path};
 use miscs::utils::{date_from_str, time_from_str};
-// use arg_parsing::parse_kwargs;
-use events::event_manager::{EventManager, EventManagerMode};
 use std::env;
 use std::fs;
 use std::io::{self, Write};
+use std::path::PathBuf;
 use std::process::Command;
 use std::sync::{Arc, Mutex};
-// use utils::parse_stupid_recursive;
-use miscs::utils::{clear_screen, get_path};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
 
-    let data_file_path = get_path();
+    let path = get_path();
 
     let event_manager: Arc<Mutex<EventManager>>;
+    let data_file_path: PathBuf;
+    let category_file_path: PathBuf;
 
-    if let Some(dfp) = &data_file_path {
-        event_manager = EventManager::new(dfp.clone(), false, EventManagerMode::Active);
+    if let Some(fp) = &path {
+        data_file_path = fp.clone().join("dates.json");
+        category_file_path = fp.clone().join("categories.txt");
+
+        event_manager = EventManager::new(data_file_path.clone(), false, EventManagerMode::Active);
+        load_categories(&category_file_path);
     } else {
         eprintln!("error cant create Config file");
         return;
@@ -63,6 +69,7 @@ fn main() {
         event_manager.lock().unwrap().list_events();
         loop_mode(&event_manager);
     }
+    save_categories(&category_file_path);
 }
 
 fn service_start() {

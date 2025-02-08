@@ -59,7 +59,11 @@ pub fn main_loop() -> Result<(), Error> {
     let event_manager: Arc<Mutex<EventManager>>;
 
     if let Some(dfp) = &data_file_path {
-        event_manager = EventManager::new(dfp.clone(), false, EventManagerMode::Passive);
+        event_manager = EventManager::new(
+            dfp.join("dates.json").clone(),
+            false,
+            EventManagerMode::Passive,
+        );
     } else {
         eprintln!("Can't open Event File");
         return Err(Error::new(
