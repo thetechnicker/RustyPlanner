@@ -384,7 +384,7 @@ impl Default for Event {
             updated_at: Local::now(),
             notification_settings: Default::default(),
             is_all_day: false,
-            categories: vec!["Default".to_string()],
+            categories: Vec::new(),
         }
     }
 }
