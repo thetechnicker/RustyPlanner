@@ -122,7 +122,7 @@ impl EventManager {
     pub fn add_event(&mut self, mut event: Event) -> isize {
         if EventManagerMode::Active == self.mode {
             if event.event_id.is_empty() {
-                event.event_id = format!("#{}", self.events.len());
+                event.event_id = format!("#{}", self.events.len() + 1);
             }
             self.events.push(event);
             if self.auto_save {

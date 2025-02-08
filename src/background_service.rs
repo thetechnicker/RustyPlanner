@@ -83,7 +83,7 @@ pub fn main_loop() -> Result<(), Error> {
             let notifications = event.is_time_to_notify(now);
             for notification in notifications {
                 println!("Notification: {:?}", notification);
-                if notification.1 {
+                if notification.1 && !event.notification_settings[notification.0].has_notified {
                     match event.notification_settings[notification.0].method {
                         NotificationMethod::Push => {
                             send_notification(&event.title, &event.description)
@@ -91,34 +91,24 @@ pub fn main_loop() -> Result<(), Error> {
                         NotificationMethod::Email => todo!(),
                         NotificationMethod::Sms => todo!(),
                     }
-                    //event.notification_settings[notification.0].has_notified = true;
+                    event.notification_settings[notification.0].has_notified = true;
                     has_to_save = true;
-                }
-            }
-            /*
-            if !event.is_recurring {
-                for notification in event.notification_settings.iter_mut() {
-                    if event.start_time - Duration::minutes(notification.notify_before) <= now
-                        && !notification.has_notified
-                    {
-                        match notification.method {
-                            NotificationMethod::Push => {
-                                send_notification(&event.title, &event.description)
-                            }
-                            NotificationMethod::Email => todo!(),
-                            NotificationMethod::Sms => todo!(),
-                        }
-                        notification.has_notified = true;
+                } else if event.is_recurring
+                    && event.notification_settings[notification.0].has_notified
+                {
+                    println!("Resetting notification for recurring event");
+                    if !notification.1 {
+                        event.notification_settings[notification.0].has_notified = false;
                         has_to_save = true;
                     }
                 }
             }
-            */
         }
         if has_to_save {
             println!("Saving events...");
             event_manager.lock().unwrap().save_events();
         }
+        println!("{}", String::from("-").repeat(50));
         thread::sleep(StdDuration::from_millis(500)); // old values: 250ms
     }
 

@@ -581,9 +581,10 @@ impl Event {
                     .as_ref()
                     .unwrap()
                     .is_now(now + Duration::minutes(notification.notify_before))
-                    && !notification.has_notified
                 {
                     notifications.push((i, true));
+                } else {
+                    notifications.push((i, false));
                 }
             } else if self.start_time - Duration::minutes(notification.notify_before) <= now
                 && !notification.has_notified

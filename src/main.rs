@@ -183,6 +183,16 @@ fn parse_commands(command: &str, event_manager: &Arc<Mutex<EventManager>>) {
                 eprintln!("Invalid index: {}", index);
             }
         }
+        _ if command.starts_with("remove") => {
+            let index = command.strip_prefix("remove").unwrap_or("").trim();
+            let index = index.parse::<usize>().unwrap_or(0);
+            if index > 0 {
+                event_manager.lock().unwrap().remove_event(index - 1);
+                event_manager.lock().unwrap().save_events();
+            } else {
+                eprintln!("Invalid index: {}", index);
+            }
+        }
         _ if command.starts_with("help") => {
             let command_help = command.strip_prefix("help ").unwrap_or("");
             match command_help {
