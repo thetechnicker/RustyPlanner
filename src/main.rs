@@ -6,7 +6,10 @@ use background_service::service_main;
 use chrono::DateTime;
 use chrono::Local;
 use events::{
-    event::{load_categories, save_categories, Attendee, Event, Notification, NotificationMethod},
+    event::{
+        load_categories, save_categories, Attendee, Event, Notification, NotificationMethod,
+        CATEGORIES,
+    },
     event_manager::{EventManager, EventManagerMode, SearchType},
 };
 use miscs::{
@@ -135,6 +138,15 @@ fn parse_commands(command: &str, event_manager: &Arc<Mutex<EventManager>>) {
                     let string = input.strip_prefix("event").unwrap_or(command).trim();
                     add_event_loop(string, event_manager);
                 }
+                _ if input.starts_with("category") => {
+                    let category = input.strip_prefix("category").unwrap_or("").trim();
+                    if !category.is_empty() {
+                        CATEGORIES.lock().unwrap().push(category.to_string());
+                        println!("Category added: {}", category);
+                    } else {
+                        eprintln!("Invalid category name");
+                    }
+                }
                 _ => print_add_help(),
             }
         }
@@ -197,23 +209,36 @@ fn parse_commands(command: &str, event_manager: &Arc<Mutex<EventManager>>) {
             }
         }
         _ if command.starts_with("list") => {
-            let index = command
-                .strip_prefix("list")
-                .unwrap_or("")
-                .trim()
-                .parse::<usize>();
-            if let Ok(index) = index {
-                if index > 0 {
-                    if let Some(event) = event_manager.lock().unwrap().get_event(index - 1) {
-                        println!("{}", event);
+            let input = command.strip_prefix("list").unwrap_or("").trim();
+            match input {
+                _ if input.starts_with("event") => {
+                    let index = command
+                        .strip_prefix("event")
+                        .unwrap_or("")
+                        .trim()
+                        .parse::<usize>();
+                    if let Ok(index) = index {
+                        if index > 0 {
+                            if let Some(event) = event_manager.lock().unwrap().get_event(index - 1)
+                            {
+                                println!("{}", event);
+                            } else {
+                                eprintln!("No event found at index {}", index);
+                            }
+                        } else {
+                            eprintln!("Invalid index: {}", index);
+                        }
                     } else {
-                        eprintln!("No event found at index {}", index);
+                        event_manager.lock().unwrap().list_events();
                     }
-                } else {
-                    eprintln!("Invalid index: {}", index);
                 }
-            } else {
-                event_manager.lock().unwrap().list_events();
+                _ if input.starts_with("categories") => {
+                    println!("Categories:");
+                    for category in CATEGORIES.lock().unwrap().iter() {
+                        println!("\t{}", category);
+                    }
+                }
+                _ => print_list_help(),
             }
         }
         "save" => {

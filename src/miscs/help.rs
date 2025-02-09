@@ -2,7 +2,7 @@ use crate::events::event::{ATTENDEE_FIELDS, EVENT_FIELDS, RECURRENCE_FIELDS};
 
 pub fn print_help() {
     println!("Available commands:");
-    println!("  add    - Add a new event");
+    println!("  add    - Add a new event or category");
     println!("  save   - Save events to file");
     println!("  remove - Remove an event by index");
     println!("  edit   - Edit an event by index");
@@ -19,7 +19,7 @@ pub fn print_help() {
 }
 
 pub fn print_add_help() {
-    let mut help_message = "Usage: add event [OPTIONS]\n\n".to_string();
+    let mut help_message = "Usage: add [event|category] [OPTIONS]\n\n".to_string();
     help_message += "event:\n";
     for attribute in EVENT_FIELDS.iter() {
         let part_a = format!("\t{}:", attribute[0]);
@@ -42,6 +42,8 @@ pub fn print_add_help() {
             }
         }
     }
+    help_message += "\ncategory:\n";
+    help_message += "\t[name]";
     println!("{}", help_message);
 }
 
