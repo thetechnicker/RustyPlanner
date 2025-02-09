@@ -72,8 +72,16 @@ pub fn print_cls_help() {
 }
 
 pub fn print_list_help() {
-    println!("  list           - List all events");
-    println!("                  Description: Displays all current events in the calendar.");
+    println!("  list [events|categories] - List all events");
+    println!(
+        "                            Description: Displays all current events in the calendar."
+    );
+}
+
+pub fn print_search_help() {
+    println!("  search <type> <keyword> - Search for events by keyword");
+    println!("                           Description: Searches for events that contain the specified keyword."
+    );
 }
 
 pub fn print_clear_help() {

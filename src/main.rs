@@ -15,7 +15,7 @@ use events::{
 use miscs::{
     help::{
         print_add_help, print_clear_help, print_cls_help, print_edit_help, print_help,
-        print_list_help, print_remove_help, print_save_help,
+        print_list_help, print_remove_help, print_save_help, print_search_help,
     },
     utils::{clear_screen, date_from_str, get_path, time_from_str},
 };
@@ -186,6 +186,7 @@ fn parse_commands(command: &str, event_manager: &Arc<Mutex<EventManager>>) {
                 "cls" => print_cls_help(),
                 "list" => print_list_help(),
                 "clear" => print_clear_help(),
+                "search" => print_search_help(),
                 "" => print_help(), // Default help message
                 _ => print_help(),  // Fallback for unrecognized commands
             }
