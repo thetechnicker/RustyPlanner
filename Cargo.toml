@@ -11,10 +11,6 @@ default-run = "RustyPlanner"
 name = "RustyPlanner"
 path = "src/main.rs"
 
-[[bin]]
-name = "RustyPlanner_daemon"
-path = "src/background_service.rs"
-
 [dependencies]
 chrono = { version = "0.4.39", features = ["serde"] }
 directories = "6.0.0"

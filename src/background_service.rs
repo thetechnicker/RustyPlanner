@@ -1,11 +1,11 @@
-mod events;
-mod miscs;
+//mod events;
+//mod miscs;
 
+use crate::events::event::NotificationMethod;
+use crate::events::event_manager::{EventManager, EventManagerMode};
+use crate::miscs::notification::send_notification;
+use crate::miscs::utils::get_path;
 use daemonize::Daemonize;
-use events::event::NotificationMethod;
-use events::event_manager::{EventManager, EventManagerMode};
-use miscs::notification::send_notification;
-use miscs::utils::get_path;
 use std::fs::File;
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -16,7 +16,7 @@ use signal_hook::flag;
 use std::io::Error;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-fn main() -> Result<(), Error> {
+pub fn service_main() -> Result<(), Error> {
     let stdout = File::create("/tmp/RustyPlannerDaemon.out").unwrap();
     let stderr = File::create("/tmp/RustyPlannerDaemon.err").unwrap();
 
@@ -59,7 +59,11 @@ pub fn main_loop() -> Result<(), Error> {
     let event_manager: Arc<Mutex<EventManager>>;
 
     if let Some(dfp) = &data_file_path {
-        event_manager = EventManager::new(dfp.clone(), false, EventManagerMode::Passive);
+        event_manager = EventManager::new(
+            dfp.join("dates.json").clone(),
+            false,
+            EventManagerMode::Passive,
+        );
     } else {
         eprintln!("Can't open Event File");
         return Err(Error::new(
@@ -78,6 +82,7 @@ pub fn main_loop() -> Result<(), Error> {
         );
         // event_manager.lock().unwrap().list_events();
         let mut has_to_save = false;
+        let loop_timestamp_ns = now.timestamp_nanos_opt().unwrap();
         for (index, event) in event_manager.lock().unwrap().iter_events_mut().enumerate() {
             println!("\t{index}: {event:?}");
             let notifications = event.is_time_to_notify(now);
@@ -108,8 +113,19 @@ pub fn main_loop() -> Result<(), Error> {
             println!("Saving events...");
             event_manager.lock().unwrap().save_events();
         }
+        let loop_duration_ns =
+            chrono::Local::now().timestamp_nanos_opt().unwrap() - loop_timestamp_ns;
+
         println!("{}", String::from("-").repeat(50));
-        thread::sleep(StdDuration::from_millis(500)); // old values: 250ms
+        thread::sleep(
+            StdDuration::from_secs(1)
+                - StdDuration::from_nanos(if loop_duration_ns > 0 {
+                    loop_duration_ns as u64
+                } else {
+                    0
+                }),
+        );
+        // old values: 250ms, 500ms
     }
 
     println!("Received SIGTERM kill signal. Exiting...");

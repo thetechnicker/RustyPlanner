@@ -93,7 +93,7 @@ cargo run
 ### Event Features
 
 - [x] Simple events
-- [ ] Repeating events
+- [x] Repeating events
 - [ ] Event categorization
 - [ ] Search functionality
 - [ ] Export/Import of events

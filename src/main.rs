@@ -1,34 +1,46 @@
+mod background_service;
 mod events;
 mod miscs;
 
+use background_service::service_main;
 use chrono::DateTime;
 use chrono::Local;
-use events::event::Attendee;
-use events::event::Event;
-use events::event::Notification;
-use events::event::NotificationMethod;
-use events::event::{ATTENDEE_FIELDS, EVENT_FIELDS, RECURRENCE_FIELDS};
-use miscs::arg_parsing::parse_data;
-use miscs::utils::{date_from_str, time_from_str};
-// use arg_parsing::parse_kwargs;
-use events::event_manager::{EventManager, EventManagerMode};
+use events::{
+    event::{
+        load_categories, save_categories, Attendee, Event, Notification, NotificationMethod,
+        CATEGORIES,
+    },
+    event_manager::{EventManager, EventManagerMode, SearchType},
+};
+use miscs::{
+    help::{
+        print_add_help, print_clear_help, print_cls_help, print_edit_help, print_help,
+        print_list_help, print_remove_help, print_save_help, print_search_help,
+    },
+    utils::{clear_screen, date_from_str, get_path, time_from_str},
+};
 use std::env;
 use std::fs;
 use std::io::{self, Write};
+use std::path::PathBuf;
 use std::process::Command;
 use std::sync::{Arc, Mutex};
-// use utils::parse_stupid_recursive;
-use miscs::utils::{clear_screen, get_path};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
 
-    let data_file_path = get_path();
+    let path = get_path();
 
     let event_manager: Arc<Mutex<EventManager>>;
+    let data_file_path: PathBuf;
+    let category_file_path: PathBuf;
 
-    if let Some(dfp) = &data_file_path {
-        event_manager = EventManager::new(dfp.clone(), false, EventManagerMode::Active);
+    if let Some(fp) = &path {
+        data_file_path = fp.clone().join("dates.json");
+        category_file_path = fp.clone().join("categories.txt");
+
+        event_manager = EventManager::new(data_file_path.clone(), false, EventManagerMode::Active);
+        load_categories(&category_file_path);
     } else {
         eprintln!("error cant create Config file");
         return;
@@ -63,33 +75,11 @@ fn main() {
         event_manager.lock().unwrap().list_events();
         loop_mode(&event_manager);
     }
+    save_categories(&category_file_path);
 }
 
 fn service_start() {
-    // Check if the binary is built locally or installed globally/for user
-    #[cfg(debug_assertions)]
-    {
-        println!("Running local build");
-        let mut _child = Command::new("cargo")
-            .arg("run")
-            .arg("--bin")
-            .arg("RustyPlanner_daemon")
-            //.stdout(Stdio::null()) // Redirect standard output to null
-            //.stderr(Stdio::null()) // Redirect standard error to null
-            .spawn()
-            .expect("Failed to start background service");
-        _child.wait().expect("Failed to wait on child process");
-        println!("Service started");
-    }
-    #[cfg(not(debug_assertions))]
-    {
-        println!("Running installed version");
-        let _child = Command::new("RustyPlanner_daemon")
-            // .stdout(Stdio::null()) // Redirect standard output to null
-            // .stderr(Stdio::null()) // Redirect standard error to null
-            .spawn()
-            .expect("Failed to start background service");
-    }
+    service_main().expect("Failed to start background service");
 }
 
 fn service_stop() {
@@ -141,11 +131,6 @@ fn command_mode(event_manager: &Arc<Mutex<EventManager>>, commands: &[String]) {
 // #[allow(unused_mut)]
 fn parse_commands(command: &str, event_manager: &Arc<Mutex<EventManager>>) {
     match command {
-        _ if command.starts_with("stupid") => {
-            let input = command.strip_prefix("stupid").unwrap_or(command).trim();
-            let data = parse_data(input, 0);
-            data.print(0);
-        }
         _ if command.starts_with("add") => {
             let input = command.strip_prefix("add").unwrap_or("").trim();
             match input {
@@ -153,17 +138,15 @@ fn parse_commands(command: &str, event_manager: &Arc<Mutex<EventManager>>) {
                     let string = input.strip_prefix("event").unwrap_or(command).trim();
                     add_event_loop(string, event_manager);
                 }
-                // Currently not usefull
-                /*
-                                _ if input.starts_with("notification") => {
-                                    let input = input.strip_prefix("notification").unwrap_or(command).trim();
-                                    add_notification_loop(input, event_manager);
-                                }
-                                _ if input.starts_with("attendance") => {
-                                    let input = input.strip_prefix("attendance").unwrap_or(command).trim();
-                                    add_attendance_loop(input, event_manager);
-                                }
-                */
+                _ if input.starts_with("category") => {
+                    let category = input.strip_prefix("category").unwrap_or("").trim();
+                    if !category.is_empty() {
+                        CATEGORIES.lock().unwrap().push(category.to_string());
+                        println!("Category added: {}", category);
+                    } else {
+                        eprintln!("Invalid category name");
+                    }
+                }
                 _ => print_add_help(),
             }
         }
@@ -203,15 +186,64 @@ fn parse_commands(command: &str, event_manager: &Arc<Mutex<EventManager>>) {
                 "cls" => print_cls_help(),
                 "list" => print_list_help(),
                 "clear" => print_clear_help(),
+                "search" => print_search_help(),
                 "" => print_help(), // Default help message
                 _ => print_help(),  // Fallback for unrecognized commands
             }
         }
+        _ if command.starts_with("search") => {
+            let (search_type_str, search_query) = command
+                .strip_prefix("search")
+                .unwrap_or("")
+                .trim()
+                .split_once(" ")
+                .unwrap_or(("", ""));
+
+            for (i, event) in event_manager
+                .lock()
+                .unwrap()
+                .search_event(search_query, SearchType::from(search_type_str))
+                .iter()
+                .enumerate()
+            {
+                println!("{}, {}", i + 1, event);
+            }
+        }
+        _ if command.starts_with("list") => {
+            let input = command.strip_prefix("list").unwrap_or("").trim();
+            match input {
+                _ if input.starts_with("event") => {
+                    let index = command
+                        .strip_prefix("event")
+                        .unwrap_or("")
+                        .trim()
+                        .parse::<usize>();
+                    if let Ok(index) = index {
+                        if index > 0 {
+                            if let Some(event) = event_manager.lock().unwrap().get_event(index - 1)
+                            {
+                                println!("{}", event);
+                            } else {
+                                eprintln!("No event found at index {}", index);
+                            }
+                        } else {
+                            eprintln!("Invalid index: {}", index);
+                        }
+                    } else {
+                        event_manager.lock().unwrap().list_events();
+                    }
+                }
+                _ if input.starts_with("categories") => {
+                    println!("Categories:");
+                    for category in CATEGORIES.lock().unwrap().iter() {
+                        println!("\t{}", category);
+                    }
+                }
+                _ => print_list_help(),
+            }
+        }
         "save" => {
             event_manager.lock().unwrap().save_events();
-        }
-        "list" => {
-            event_manager.lock().unwrap().list_events();
         }
         "clear" => {
             event_manager.lock().unwrap().clear();
@@ -301,85 +333,6 @@ fn ask_user(prompt: &str, default: &str) -> String {
     } else {
         trimmed.to_string()
     }
-}
-
-fn print_help() {
-    println!("Available commands:");
-    println!("  add    - Add a new event");
-    println!("  save   - Save events to file");
-    println!("  remove - Remove an event by index");
-    println!("  edit   - Edit an event by index");
-    println!("  cls    - Clear the screen");
-    println!("  list   - List all events");
-    println!("  clear  - Clear all events");
-    println!("  help   - Show this help message");
-    println!("  exit   - Exit the application");
-    println!();
-    //println!("Use the 'add' command to create a new event with optional parameters for description, location, and notification time.");
-    println!(
-        "For more details on each command run `help [Command Name]`, refer to the documentation."
-    );
-}
-
-fn print_add_help() {
-    let mut help_message = "Usage: add event [OPTIONS]\n\n".to_string();
-    help_message += "event:\n";
-    for attribute in EVENT_FIELDS.iter() {
-        let part_a = format!("\t{}:", attribute[0]);
-        let part_b = format!("\t[{}]", attribute[1]);
-        help_message += &format!("{:<20}{}\n", part_a, part_b);
-        if attribute[0] == "recurrence" {
-            help_message += "\t\tRecurrence Attributes:\n";
-            for recurrence_attribute in RECURRENCE_FIELDS.iter() {
-                let part_a = format!("\t{}:", recurrence_attribute[0]);
-                let part_b = format!("\t[{}]", recurrence_attribute[1]);
-                help_message += &format!("\t\t{:<20}{}\n", part_a, part_b);
-            }
-        }
-        if attribute[0] == "attendees" {
-            help_message += "\tAttendee Attributes:\n";
-            for attendee_attributes in ATTENDEE_FIELDS.iter() {
-                let part_a = format!("\t{}:", attendee_attributes[0]);
-                let part_b = format!("\t[{}]", attendee_attributes[1]);
-                help_message += &format!("\t\t{:<20}{}\n", part_a, part_b);
-            }
-        }
-    }
-    println!("{}", help_message);
-}
-
-fn print_save_help() {
-    println!("  save           - Save events to file");
-    println!("                  Usage: save <filename>");
-    println!("                  Description: Saves all current events to the specified file.");
-}
-
-fn print_remove_help() {
-    println!("  remove <index> - Remove an event by index");
-    println!("                  Usage: remove <index>");
-    println!("                  Description: Removes the event at the specified index from the list of events.");
-}
-
-fn print_edit_help() {
-    println!("  edit <index>   - Edit an event by index");
-    println!("                  Usage: edit <index> [options]");
-    println!("                  Description: Edits the event at the specified index. Options can include");
-    println!("                  mode, name, date, time, description, location, and alarm time.");
-}
-
-fn print_cls_help() {
-    println!("  cls            - Clear the screen");
-    println!("                  Description: Clears the console screen for better visibility.");
-}
-
-fn print_list_help() {
-    println!("  list           - List all events");
-    println!("                  Description: Displays all current events in the calendar.");
-}
-
-fn print_clear_help() {
-    println!("  clear          - Clear all events");
-    println!("                  Description: Removes all events from the calendar.");
 }
 
 fn update_event(event: &mut Event) {

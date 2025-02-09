@@ -10,6 +10,31 @@ use crate::miscs::arg_parsing::parse_data;
 
 use super::event::Event;
 
+pub enum SearchType {
+    Title,
+    Description,
+    Location,
+    Category,
+    Attendee,
+    Date,
+    FullText,
+}
+
+impl SearchType {
+    pub fn from(s: &str) -> SearchType {
+        match s {
+            "title" => SearchType::Title,
+            "description" => SearchType::Description,
+            "location" => SearchType::Location,
+            "category" => SearchType::Category,
+            "attendee" => SearchType::Attendee,
+            "date" => SearchType::Date,
+            "fulltext" => SearchType::FullText,
+            _ => SearchType::Title,
+        }
+    }
+}
+
 #[derive(PartialEq, Eq)]
 pub enum EventManagerMode {
     Active,  // manages events, has read/write access
@@ -88,7 +113,7 @@ impl EventManager {
     pub fn list_events(&self) {
         println!("Events:");
         for (index, event) in self.events.iter().enumerate() {
-            println!("{index}: {}", event);
+            println!("{}: {}", index + 1, event);
         }
     }
 
@@ -109,10 +134,6 @@ impl EventManager {
 
     pub fn get_event_mut(&mut self, x: usize) -> Option<&mut Event> {
         Some(&mut self.events[x])
-    }
-
-    pub fn iter_events(&self) -> impl Iterator<Item = &Event> {
-        self.events.iter()
     }
 
     pub fn iter_events_mut(&mut self) -> impl Iterator<Item = &mut Event> {
@@ -142,19 +163,6 @@ impl EventManager {
         }
     }
 
-    pub fn replace_event(&mut self, x: usize, event: Event) -> Option<Event> {
-        let mut _event: Option<Event> = None;
-        if x < self.events.len() {
-            _event = Some(std::mem::replace(&mut self.events[x], event));
-        } else {
-            _event = None;
-        }
-        if self.auto_save {
-            self.save_events();
-        }
-        _event
-    }
-
     pub fn add_event_from_str(&mut self, string: &str) -> isize {
         let data = parse_data(string, 0);
         data.print(0);
@@ -169,6 +177,51 @@ impl EventManager {
                 -1
             }
         }
+    }
+
+    #[allow(dead_code)]
+    pub fn sort_events_by(&mut self, sort_by: SearchType) -> Vec<Event> {
+        let mut result: Vec<Event> = self.events.clone();
+        match sort_by {
+            SearchType::Title => result.sort_by(|a, b| a.title.cmp(&b.title)),
+            SearchType::Date => result.sort_by(|a, b| a.start_time.cmp(&b.start_time)),
+            SearchType::Location => result.sort_by(|a, b| a.location.cmp(&b.location)),
+            _ => todo!(),
+        }
+        result
+    }
+
+    pub fn search_event(&self, search_string: &str, search_type: SearchType) -> Vec<&Event> {
+        let mut result: Vec<&Event> = Vec::new();
+        for event in self.events.iter() {
+            match search_type {
+                SearchType::Title => {
+                    if event.title.contains(search_string) {
+                        result.push(event);
+                    }
+                }
+                SearchType::Date => {
+                    if event
+                        .start_time
+                        .format("%Y-%m-&d %H:%M")
+                        .to_string()
+                        .contains(search_string)
+                    {
+                        result.push(event);
+                    }
+                }
+                SearchType::FullText => {
+                    if serde_json::to_string(event)
+                        .expect("Failed to convert to JSON")
+                        .contains(search_string)
+                    {
+                        result.push(event);
+                    }
+                }
+                _ => todo!(),
+            }
+        }
+        result
     }
 }
 
