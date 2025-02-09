@@ -179,6 +179,18 @@ impl EventManager {
         }
     }
 
+    #[allow(dead_code)]
+    pub fn sort_events_by(&mut self, sort_by: SearchType) -> Vec<Event> {
+        let mut result: Vec<Event> = self.events.clone();
+        match sort_by {
+            SearchType::Title => result.sort_by(|a, b| a.title.cmp(&b.title)),
+            SearchType::Date => result.sort_by(|a, b| a.start_time.cmp(&b.start_time)),
+            SearchType::Location => result.sort_by(|a, b| a.location.cmp(&b.location)),
+            _ => todo!(),
+        }
+        result
+    }
+
     pub fn search_event(&self, search_string: &str, search_type: SearchType) -> Vec<&Event> {
         let mut result: Vec<&Event> = Vec::new();
         for event in self.events.iter() {
