@@ -35,6 +35,7 @@ pub fn get_path() -> std::option::Option<PathBuf> {
     data_file_path
 }
 
+#[allow(dead_code)]
 pub fn duration_to_string(duration: &Duration) -> String {
     let seconds = duration.num_seconds();
     let hours = seconds / 3600;

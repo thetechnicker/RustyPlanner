@@ -7,7 +7,7 @@ use chrono::DateTime;
 use chrono::Local;
 use events::{
     event::{load_categories, save_categories, Attendee, Event, Notification, NotificationMethod},
-    event_manager::{EventManager, EventManagerMode},
+    event_manager::{EventManager, EventManagerMode, SearchType},
 };
 use miscs::{
     arg_parsing::parse_data,
@@ -129,11 +129,6 @@ fn command_mode(event_manager: &Arc<Mutex<EventManager>>, commands: &[String]) {
 // #[allow(unused_mut)]
 fn parse_commands(command: &str, event_manager: &Arc<Mutex<EventManager>>) {
     match command {
-        _ if command.starts_with("stupid") => {
-            let input = command.strip_prefix("stupid").unwrap_or(command).trim();
-            let data = parse_data(input, 0);
-            data.print(0);
-        }
         _ if command.starts_with("add") => {
             let input = command.strip_prefix("add").unwrap_or("").trim();
             match input {
@@ -195,11 +190,46 @@ fn parse_commands(command: &str, event_manager: &Arc<Mutex<EventManager>>) {
                 _ => print_help(),  // Fallback for unrecognized commands
             }
         }
+        _ if command.starts_with("search") => {
+            let (search_type_str, search_query) = command
+                .strip_prefix("search")
+                .unwrap_or("")
+                .trim()
+                .split_once(" ")
+                .unwrap_or(("", ""));
+
+            for (i, event) in event_manager
+                .lock()
+                .unwrap()
+                .search_event(search_query, SearchType::from(search_type_str))
+                .iter()
+                .enumerate()
+            {
+                println!("{}, {}", i + 1, event);
+            }
+        }
+        _ if command.starts_with("list") => {
+            let index = command
+                .strip_prefix("list")
+                .unwrap_or("")
+                .trim()
+                .parse::<usize>();
+            if let Ok(index) = index {
+                if index > 0 {
+                    if let Some(event) = event_manager.lock().unwrap().get_event(index - 1) {
+                        println!("{}", event);
+                    } else {
+                        eprintln!("No event found at index {}", index);
+                    }
+                } else {
+                    eprintln!("Invalid index: {}", index);
+                }
+            } else {
+                event_manager.lock().unwrap().list_events();
+            }
+        }
         "save" => {
             event_manager.lock().unwrap().save_events();
-        }
-        "list" => {
-            event_manager.lock().unwrap().list_events();
         }
         "clear" => {
             event_manager.lock().unwrap().clear();
