@@ -1,11 +1,11 @@
-mod events;
-mod miscs;
+//mod events;
+//mod miscs;
 
+use crate::events::event::NotificationMethod;
+use crate::events::event_manager::{EventManager, EventManagerMode};
+use crate::miscs::notification::send_notification;
+use crate::miscs::utils::get_path;
 use daemonize::Daemonize;
-use events::event::NotificationMethod;
-use events::event_manager::{EventManager, EventManagerMode};
-use miscs::notification::send_notification;
-use miscs::utils::get_path;
 use std::fs::File;
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -16,7 +16,7 @@ use signal_hook::flag;
 use std::io::Error;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-fn main() -> Result<(), Error> {
+pub fn service_main() -> Result<(), Error> {
     let stdout = File::create("/tmp/RustyPlannerDaemon.out").unwrap();
     let stderr = File::create("/tmp/RustyPlannerDaemon.err").unwrap();
 
@@ -118,7 +118,7 @@ pub fn main_loop() -> Result<(), Error> {
 
         println!("{}", String::from("-").repeat(50));
         thread::sleep(
-            StdDuration::from_secs(1000)
+            StdDuration::from_secs(1)
                 - StdDuration::from_nanos(if loop_duration_ns > 0 {
                     loop_duration_ns as u64
                 } else {

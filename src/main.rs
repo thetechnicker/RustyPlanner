@@ -1,6 +1,8 @@
+mod background_service;
 mod events;
 mod miscs;
 
+use background_service::service_main;
 use chrono::DateTime;
 use chrono::Local;
 use events::{
@@ -10,8 +12,8 @@ use events::{
 use miscs::{
     arg_parsing::parse_data,
     help::{
-        print_add_help, print_clear_help, print_edit_help, print_help, print_list_help,
-        print_remove_help, print_save_help,
+        print_add_help, print_clear_help, print_cls_help, print_edit_help, print_help,
+        print_list_help, print_remove_help, print_save_help,
     },
     utils::{clear_screen, date_from_str, get_path, time_from_str},
 };
@@ -75,30 +77,7 @@ fn main() {
 }
 
 fn service_start() {
-    // Check if the binary is built locally or installed globally/for user
-    #[cfg(debug_assertions)]
-    {
-        println!("Running local build");
-        let mut _child = Command::new("cargo")
-            .arg("run")
-            .arg("--bin")
-            .arg("RustyPlanner_daemon")
-            //.stdout(Stdio::null()) // Redirect standard output to null
-            //.stderr(Stdio::null()) // Redirect standard error to null
-            .spawn()
-            .expect("Failed to start background service");
-        _child.wait().expect("Failed to wait on child process");
-        println!("Service started");
-    }
-    #[cfg(not(debug_assertions))]
-    {
-        println!("Running installed version");
-        let _child = Command::new("RustyPlanner_daemon")
-            // .stdout(Stdio::null()) // Redirect standard output to null
-            // .stderr(Stdio::null()) // Redirect standard error to null
-            .spawn()
-            .expect("Failed to start background service");
-    }
+    service_main().expect("Failed to start background service");
 }
 
 fn service_stop() {
