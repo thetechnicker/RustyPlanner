@@ -311,6 +311,7 @@ fn ask_user(prompt: &str, default: &str) -> String {
         trimmed.to_string()
     }
 }
+
 fn update_event(event: &mut Event) {
     // Update title
     let new_title = ask_user("Enter new title", &event.title);
