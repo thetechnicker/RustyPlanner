@@ -10,7 +10,6 @@ use events::{
     event_manager::{EventManager, EventManagerMode, SearchType},
 };
 use miscs::{
-    arg_parsing::parse_data,
     help::{
         print_add_help, print_clear_help, print_cls_help, print_edit_help, print_help,
         print_list_help, print_remove_help, print_save_help,
@@ -136,17 +135,6 @@ fn parse_commands(command: &str, event_manager: &Arc<Mutex<EventManager>>) {
                     let string = input.strip_prefix("event").unwrap_or(command).trim();
                     add_event_loop(string, event_manager);
                 }
-                // Currently not usefull
-                /*
-                                _ if input.starts_with("notification") => {
-                                    let input = input.strip_prefix("notification").unwrap_or(command).trim();
-                                    add_notification_loop(input, event_manager);
-                                }
-                                _ if input.starts_with("attendance") => {
-                                    let input = input.strip_prefix("attendance").unwrap_or(command).trim();
-                                    add_attendance_loop(input, event_manager);
-                                }
-                */
                 _ => print_add_help(),
             }
         }
