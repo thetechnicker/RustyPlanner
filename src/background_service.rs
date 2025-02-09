@@ -82,6 +82,7 @@ pub fn main_loop() -> Result<(), Error> {
         );
         // event_manager.lock().unwrap().list_events();
         let mut has_to_save = false;
+        let loop_timestamp_ns = now.timestamp_nanos_opt().unwrap();
         for (index, event) in event_manager.lock().unwrap().iter_events_mut().enumerate() {
             println!("\t{index}: {event:?}");
             let notifications = event.is_time_to_notify(now);
@@ -112,8 +113,19 @@ pub fn main_loop() -> Result<(), Error> {
             println!("Saving events...");
             event_manager.lock().unwrap().save_events();
         }
+        let loop_duration_ns =
+            chrono::Local::now().timestamp_nanos_opt().unwrap() - loop_timestamp_ns;
+
         println!("{}", String::from("-").repeat(50));
-        thread::sleep(StdDuration::from_millis(500)); // old values: 250ms
+        thread::sleep(
+            StdDuration::from_secs(1000)
+                - StdDuration::from_nanos(if loop_duration_ns > 0 {
+                    loop_duration_ns as u64
+                } else {
+                    0
+                }),
+        );
+        // old values: 250ms, 500ms
     }
 
     println!("Received SIGTERM kill signal. Exiting...");
