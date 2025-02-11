@@ -1,11 +1,11 @@
 //mod events;
 //mod miscs;
 
-use crate::events::event::NotificationMethod;
-use crate::events::event_manager::{EventManager, EventManagerMode};
-use crate::miscs::notification::send_notification;
-use crate::miscs::utils::get_path;
 use daemonize::Daemonize;
+use rusty_planner_lib::events::event::NotificationMethod;
+use rusty_planner_lib::events::event_manager::{EventManager, EventManagerMode};
+use rusty_planner_lib::miscs::notification::send_notification;
+use rusty_planner_lib::miscs::utils::get_path;
 use std::fs::File;
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -16,6 +16,7 @@ use signal_hook::flag;
 use std::io::Error;
 use std::sync::atomic::{AtomicBool, Ordering};
 
+#[allow(dead_code)]
 pub fn service_main() -> Result<(), Error> {
     let stdout = File::create("/tmp/RustyPlannerDaemon.out").unwrap();
     let stderr = File::create("/tmp/RustyPlannerDaemon.err").unwrap();
@@ -36,14 +37,14 @@ pub fn service_main() -> Result<(), Error> {
     match daemonize.start() {
         Ok(_) => {
             println!("Success, daemonized");
-            main_loop()
+            return main_loop();
         }
         Err(e) => {
             eprintln!("Error, {}", e);
-            Err(Error::new(
+            return Err(Error::new(
                 std::io::ErrorKind::Other,
                 "Error, can't daemonize",
-            ))
+            ));
         }
     }
 }

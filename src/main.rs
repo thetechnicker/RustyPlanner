@@ -1,18 +1,16 @@
 mod background_service;
-mod events;
-mod miscs;
 
 use background_service::service_main;
 use chrono::DateTime;
 use chrono::Local;
-use events::{
+use rusty_planner_lib::events::{
     event::{
         load_categories, save_categories, Attendee, Event, Notification, NotificationMethod,
         CATEGORIES,
     },
     event_manager::{EventManager, EventManagerMode, SearchType},
 };
-use miscs::{
+use rusty_planner_lib::miscs::{
     help::{
         print_add_help, print_clear_help, print_cls_help, print_edit_help, print_help,
         print_list_help, print_remove_help, print_save_help, print_search_help,
