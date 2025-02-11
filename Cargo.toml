@@ -7,6 +7,10 @@ license = "MIT"
 description = "A command-line tool for managing your appointments and events."
 default-run = "RustyPlanner"
 
+[lib]
+name = "rusty_planner_lib"
+path = "src/lib.rs"
+
 [[bin]]
 name = "RustyPlanner"
 path = "src/main.rs"
