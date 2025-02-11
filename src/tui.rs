@@ -6,9 +6,16 @@ use std::{
 };
 
 //use color_eyre::Result;
-use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
+//use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
     buffer::Buffer,
+    crossterm::{
+        event::{
+            self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEvent, KeyEventKind,
+        },
+        execute,
+        terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    },
     layout::Rect,
     prelude::*,
     style::Stylize,
@@ -19,9 +26,25 @@ use ratatui::{
 };
 
 fn main() -> io::Result<()> {
-    let mut terminal = ratatui::init();
-    let app_result = App::default().run(&mut terminal);
+    // setup terminal
+    enable_raw_mode()?;
+    let mut stdout = io::stdout();
+    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+    //let mut terminal = ratatui::init();
+    let backend = CrosstermBackend::new(stdout);
+    let mut terminal = Terminal::new(backend)?;
+
+    let mut app = App::default();
+    let app_result = app.run(&mut terminal);
+
+    disable_raw_mode()?;
+    execute!(
+        terminal.backend_mut(),
+        LeaveAlternateScreen,
+        DisableMouseCapture
+    )?;
     ratatui::restore();
+    println!("{}", app.search_term);
     app_result
 }
 
@@ -29,7 +52,7 @@ fn main() -> io::Result<()> {
 pub struct App {
     scroll: u16,
     exit: bool,
-    search_term: String,
+    pub search_term: String,
     last_tick: Instant,
 }
 
@@ -72,6 +95,7 @@ impl App {
                 Event::Key(key_event) if key_event.kind == KeyEventKind::Press => {
                     self.handle_key_event(key_event)
                 }
+                //Event::Mouse(mouse) => {}
                 _ => {}
             };
         }
@@ -112,7 +136,7 @@ impl Widget for &App {
 
         let search_bar = Paragraph::new(Text::from(vec![Line::from(vec![
             "Search: ".into(),
-            self.search_term.clone().black(),
+            self.search_term.clone().white(),
         ])]))
         .block(Block::bordered().border_type(BorderType::Rounded));
 
