@@ -1,6 +1,6 @@
 //mod events;
 //mod miscs;
-
+#[cfg(unix)]
 use daemonize::Daemonize;
 use rusty_planner_lib::events::event::NotificationMethod;
 use rusty_planner_lib::events::event_manager::{EventManager, EventManagerMode};
@@ -18,35 +18,39 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 #[allow(dead_code)]
 pub fn service_main() -> Result<(), Error> {
-    let stdout = File::create("/tmp/RustyPlannerDaemon.out").unwrap();
-    let stderr = File::create("/tmp/RustyPlannerDaemon.err").unwrap();
+    #[cfg(unix, mac)]
+    {
+        let stdout = File::create("/tmp/RustyPlannerDaemon.out").unwrap();
+        let stderr = File::create("/tmp/RustyPlannerDaemon.err").unwrap();
 
-    let user = get_current_uid();
-    let group = get_current_gid();
+        let user = get_current_uid();
+        let group = get_current_gid();
 
-    let daemonize = Daemonize::new()
-        .pid_file("/tmp/RustyPlannerDaemon.pid") // Every method except `new` and `start`
-        .chown_pid_file(true)
-        .working_directory("/tmp") // for default behaviour.
-        .user(user) // Group name
-        .group(group) // Group name
-        .stdout(stdout)
-        .stderr(stderr)
-        .privileged_action(|| "Executed before drop privileges");
+        let daemonize = Daemonize::new()
+            .pid_file("/tmp/RustyPlannerDaemon.pid") // Every method except `new` and `start`
+            .chown_pid_file(true)
+            .working_directory("/tmp") // for default behaviour.
+            .user(user) // Group name
+            .group(group) // Group name
+            .stdout(stdout)
+            .stderr(stderr)
+            .privileged_action(|| "Executed before drop privileges");
 
-    match daemonize.start() {
-        Ok(_) => {
-            println!("Success, daemonized");
-            return main_loop();
-        }
-        Err(e) => {
-            eprintln!("Error, {}", e);
-            return Err(Error::new(
-                std::io::ErrorKind::Other,
-                "Error, can't daemonize",
-            ));
+        match daemonize.start() {
+            Ok(_) => {
+                println!("Success, daemonized");
+                return main_loop();
+            }
+            Err(e) => {
+                eprintln!("Error, {}", e);
+                return Err(Error::new(
+                    std::io::ErrorKind::Other,
+                    "Error, can't daemonize",
+                ));
+            }
         }
     }
+    return main_loop();
 }
 
 #[allow(unused_mut)]
