@@ -14,7 +14,7 @@ path = "src/main.rs"
 [dependencies]
 chrono = { version = "0.4.42", features = ["serde"] }
 directories = "6.0.0"
-notify = "8.0.0"
+notify = "8.2.0"
 notify-rust = "4.11.7"
 regex = "1.11.3"
 serde = { version = "1.0.228", features = ["derive"] }
