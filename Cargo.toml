@@ -18,7 +18,7 @@ notify = "8.0.0"
 notify-rust = "4.11.7"
 regex = "1.11.3"
 serde = { version = "1.0.228", features = ["derive"] }
-serde_json = "1.0.140"
+serde_json = "1.0.145"
 futures = "0.3.18"
 uzers = "0.12.1"
 daemonize = "0.5.0"
