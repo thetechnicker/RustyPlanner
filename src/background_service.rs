@@ -1,7 +1,12 @@
 //mod events;
 //mod miscs;
-#[cfg(unix)]
+#[cfg(any(feature = "unix", feature = "mac"))]
 use daemonize::Daemonize;
+#[cfg(any(feature = "unix", feature = "mac"))]
+use signal_hook::flag;
+#[cfg(any(feature = "unix", feature = "mac"))]
+use uzers::{get_current_gid, get_current_uid};
+
 use rusty_planner_lib::events::event::NotificationMethod;
 use rusty_planner_lib::events::event_manager::{EventManager, EventManagerMode};
 use rusty_planner_lib::miscs::notification::send_notification;
@@ -10,15 +15,12 @@ use std::fs::File;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration as StdDuration;
-use uzers::{get_current_gid, get_current_uid};
 
-use signal_hook::flag;
 use std::io::Error;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-#[allow(dead_code)]
 pub fn service_main() -> Result<(), Error> {
-    #[cfg(unix, mac)]
+    #[cfg(any(feature = "unix", feature = "mac"))]
     {
         let stdout = File::create("/tmp/RustyPlannerDaemon.out").unwrap();
         let stderr = File::create("/tmp/RustyPlannerDaemon.err").unwrap();
@@ -49,11 +51,12 @@ pub fn service_main() -> Result<(), Error> {
                 ));
             }
         }
+        return main_loop();
     }
-    return main_loop();
+    Ok(())
 }
 
-#[allow(unused_mut)]
+#[cfg(any(feature = "unix", feature = "mac"))]
 pub fn main_loop() -> Result<(), Error> {
     let term = Arc::new(AtomicBool::new(false));
 
