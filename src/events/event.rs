@@ -2,6 +2,7 @@ use chrono::Datelike;
 use chrono::{DateTime, Duration, Local, Timelike, Weekday};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
+use std::str::FromStr;
 use std::sync::Mutex;
 
 use crate::miscs::{
@@ -134,15 +135,16 @@ pub enum RecurrenceFrequency {
     Yearly,
 }
 
-impl RecurrenceFrequency {
-    pub fn from_str(string: &str) -> Self {
+impl FromStr for RecurrenceFrequency {
+    type Err = String;
+    fn from_str(string: &str) -> Result<Self, Self::Err> {
         match string.to_lowercase().as_str() {
-            "hourly" => Self::Hourly,
-            "daily" => Self::Daily,
-            "weekly" => Self::Weekly,
-            "monthly" => Self::Monthly,
-            "yearly" => Self::Yearly,
-            _ => Self::Daily,
+            "hourly" => Ok(Self::Hourly),
+            "daily" => Ok(Self::Daily),
+            "weekly" => Ok(Self::Weekly),
+            "monthly" => Ok(Self::Monthly),
+            "yearly" => Ok(Self::Yearly),
+            _ => Err(format!("Error: {} is not valid", string)),
         }
     }
 }
@@ -183,7 +185,10 @@ impl Recurrence {
                     year: None,
                 };
                 if let Some(Data::String(frequency)) = _data.get("frequency") {
-                    recurrence.frequency = RecurrenceFrequency::from_str(frequency);
+                    //if let Ok(frequency) = RecurrenceFrequency::from_str(frequency) {
+                    //    recurrence.frequency = frequency
+                    //}
+                    recurrence.frequency = RecurrenceFrequency::from_str(frequency)?;
                 }
 
                 if let Some(Data::Int(intervall)) = _data.get("intervall") {

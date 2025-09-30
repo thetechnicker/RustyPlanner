@@ -20,6 +20,7 @@ dependencies = [
  "serde_json",
  "signal-hook",
  "uzers",
+ "winapi",
 ]
 
 [[package]]
