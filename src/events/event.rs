@@ -38,7 +38,7 @@ pub fn save_categories(path: &PathBuf) {
     std::fs::write(path, categories_str).unwrap();
 }
 
-fn parse_weekday(value: &str) -> Option<Weekday> {
+pub fn parse_weekday(value: &str) -> Option<Weekday> {
     match value.to_lowercase().as_str() {
         "mon" | "monday" => Some(Weekday::Mon),
         "tue" | "tuesday" => Some(Weekday::Tue),

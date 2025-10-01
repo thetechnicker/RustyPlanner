@@ -71,7 +71,11 @@ impl EventManager {
         event_manager.lock().unwrap().read_events_from_file();
 
         //if let EventManagerMode::Passive = event_manager.lock().unwrap().mode {
-        println!("Monitoring file: {:?}", file_path);
+        println!("Monitoring file: {:?} ({})", file_path, file_path.exists());
+        if !file_path.exists() {
+            let _ = fs::write(&file_path, "");
+        }
+
         EventManager::monitor_file(event_manager.clone(), file_path);
         //}
 
@@ -79,10 +83,11 @@ impl EventManager {
     }
 
     pub fn monitor_file(event_manager: Arc<Mutex<EventManager>>, file_path: PathBuf) {
+        // println!("{:?}", file_path);
         std::thread::spawn(move || {
             futures::executor::block_on(async {
                 if let Err(e) = async_watch(event_manager, file_path).await {
-                    println!("error: {:?}", e)
+                    println!("error running watch: {:?}", e)
                 }
             });
         });
@@ -242,7 +247,7 @@ fn async_watcher() -> notify::Result<(RecommendedWatcher, Receiver<notify::Resul
 
 async fn async_watch(event_manager: Arc<Mutex<EventManager>>, path: PathBuf) -> notify::Result<()> {
     let (mut watcher, mut rx) = async_watcher()?;
-
+    // println!("{:?}", path);
     watcher.watch(path.as_ref(), RecursiveMode::Recursive)?;
 
     while let Some(res) = rx.next().await {

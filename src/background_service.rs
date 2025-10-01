@@ -8,7 +8,7 @@ use signal_hook::flag;
 use uzers::{get_current_gid, get_current_uid};
 
 use std::io::Error;
-
+#[allow(dead_code)]
 pub fn main() -> Result<(), Error> {
     service_main()
 }

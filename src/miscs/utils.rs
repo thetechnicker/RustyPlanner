@@ -1,4 +1,4 @@
-use chrono::{Duration, Local, NaiveDate, NaiveTime};
+use chrono::{Duration, Local, NaiveDate, NaiveDateTime, NaiveTime};
 #[cfg(not(test))]
 use directories::BaseDirs;
 use regex::Regex;
@@ -6,6 +6,9 @@ use regex::Regex;
 use std::fs;
 use std::io::{self, Write};
 use std::path::PathBuf;
+
+const DATE_FORMATS: [&str; 4] = ["%Y-%m-%d", "%d-%m-%Y", "%d.%m.%Y", "%m/%d/%Y"];
+const TIME_FORMATS: [&str; 3] = ["%H:%M:%S", "%H:%M", "%I:%M %p"];
 
 #[cfg(test)]
 pub fn get_path() -> std::option::Option<PathBuf> {
@@ -45,9 +48,50 @@ pub fn duration_to_string(duration: &Duration) -> String {
     format!("{}h{}m", hours, minutes)
 }
 
+#[derive(Debug)]
+pub enum AAAA {
+    Date(Result<NaiveDate, chrono::ParseError>),
+    Time(Result<NaiveTime, chrono::ParseError>),
+    DateTime(Result<NaiveDateTime, chrono::ParseError>),
+}
+
+// TODO:
+pub fn datetime_from_str(datetime_str: &str) -> Result<NaiveDateTime, Vec<(AAAA, String)>> {
+    let mut format_vec: Vec<String> = Vec::new();
+    for df in DATE_FORMATS {
+        for tf in TIME_FORMATS {
+            format_vec.push(format!("{} {}", df, tf));
+            format_vec.push(format!("{} {}", tf, df));
+        }
+    }
+    let mut err: Vec<(AAAA, String)> = Vec::new();
+    for fmt in format_vec {
+        let x: Result<NaiveDateTime, chrono::ParseError> =
+            NaiveDateTime::parse_from_str(datetime_str, &fmt);
+        if let Ok(dt) = x {
+            return Ok(dt);
+        }
+        err.push((AAAA::DateTime(x), String::from(fmt)));
+    }
+    for fmt in DATE_FORMATS {
+        let x = NaiveDate::parse_from_str(datetime_str, &fmt);
+        if let Ok(dt) = x {
+            return Ok(dt.and_time(Local::now().naive_utc().time()));
+        }
+        err.push((AAAA::Date(x), String::from(fmt)));
+    }
+    for fmt in TIME_FORMATS {
+        let x = NaiveTime::parse_from_str(datetime_str, &fmt);
+        if let Ok(dt) = x {
+            return Ok(Local::now().naive_utc().date().and_time(dt));
+        }
+        err.push((AAAA::Time(x), String::from(fmt)));
+    }
+    Err(err)
+}
+
 pub fn date_from_str(date_str: &str) -> NaiveDate {
-    let formats = ["%Y-%m-%d", "%d-%m-%Y", "%d.%m.%Y", "%m/%d/%Y"];
-    for format in &formats {
+    for format in DATE_FORMATS {
         if let Ok(date) = NaiveDate::parse_from_str(date_str, format) {
             return date;
         }
@@ -56,8 +100,7 @@ pub fn date_from_str(date_str: &str) -> NaiveDate {
 }
 
 pub fn time_from_str(time_str: &str) -> NaiveTime {
-    let formats = ["%H:%M:%S", "%H:%M", "%I:%M %p"];
-    for format in &formats {
+    for format in DATE_FORMATS {
         if let Ok(time) = NaiveTime::parse_from_str(time_str, format) {
             println!("{}", time.format("%H:%M:%S"));
             return time - *Local::now().offset();
