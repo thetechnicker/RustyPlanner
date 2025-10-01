@@ -16,6 +16,10 @@ name = "RustyPlanner"
 path = "src/main.rs"
 
 [[bin]]
+name = "rusty_planner_bg"
+path = "src/background_service.rs"
+
+[[bin]]
 name = "RustyPlannerTUI"
 path = "src/tui.rs"
 
