@@ -1,5 +1,8 @@
 # RustyPlanner
 
+> [!NOTE]
+> This repository will not be continued, its to much spaghetti.
+
 RustyPlanner is a command-line tool for managing your appointments and events, serving as a personal appointment calendar. It allows you to add, list, and clear events stored in a JSON file.
 
 ## Features
